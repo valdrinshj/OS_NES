@@ -1,0 +1,3 @@
+/Users/valdrin/Desktop/Operating Systems/Project/cmake-build-debug/CMakeFiles/Project.dir
+/Users/valdrin/Desktop/Operating Systems/Project/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/valdrin/Desktop/Operating Systems/Project/cmake-build-debug/CMakeFiles/rebuild_cache.dir
