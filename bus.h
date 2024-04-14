@@ -1,16 +1,18 @@
-#ifndef PROJECT_BUS_H
-#define PROJECT_BUS_H
+#ifndef BUS_H
+#define BUS_H
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "cpu.h"
 
 typedef struct{
 
-}Bus;
-
-void write(uint16_t addr, uint8_t data);
-uint8_t read(uint16_t addr);
+} Bus;
 
 
-#endif //PROJECT_BUS_H
+//Functions
+
+uint8_t BusRead(Bus *bus, uint16_t addr);
+void BusWrite(Bus *bus, uint16_t addr, uint8_t data);
+// void NesReset(Bus *bus);
+// void NesClock(Bus *bus);
+#endif
