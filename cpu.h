@@ -15,7 +15,8 @@ typedef struct {
     uint8_t cycles;
     uint8_t fetched;
     uint16_t addr_abs;
-    uint16_t addr_rel
+    uint16_t addr_rel;
+    uint16_t temp;
 } Cpu;
 
 typedef enum {

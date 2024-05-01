@@ -36,13 +36,17 @@ void cpu_write(uint16_t addr, uint8_t data) {
     BusWrite(cpu.bus, addr, data);
 }
 
-void CpuSetFlag(CpuStatusFlag flag, bool one) {
+void cpu_set_flag(CpuStatusFlag flag, bool one) {
     if (one) {
         cpu.status |= flag;
     }
     else {
         cpu.status &= ~flag;
     }
+}
+
+uint8_t cpu_get_flag(CpuStatusFlag flag) {
+    return ((cpu.status & flag) > 0) ? 1 : 0;
 }
 
 void cpu_clock() {
@@ -198,3 +202,249 @@ uint8_t REL() {
 
 //TODO: implement instructions
 //INSTRUCTIONS
+
+uint8_t cpu_fetch() {
+    if (LOOKUP[cpu.opcode].addrmode != IMP) {
+        cpu.fetched = cpu_read(cpu.addr_abs);
+    }
+    return cpu.fetched;
+}
+
+uint8_t AND() {
+    cpu_fetch();
+    cpu.A = cpu.A & cpu.fetched;
+    cpu_set_flag(Z, cpu.A == 0x00);
+    cpu_set_flag(N, cpu.A & 0x80);
+    return 1;
+}
+
+uint8_t BCS() {
+    if(cpu_set_flag(C) == 1) {
+        cpu.cycles++;
+        cpu.addr_abs = cpu.PC + cpu.addr_rel;
+        if ((cpu.addr_abs & 0xFF00) != (cpu.PC & 0xFF00)) {
+            cpu.cycles++;
+        }
+        cpu.PC = cpu.addr_abs;
+    }
+    return 0;
+}
+
+uint8_t BCC() {
+    if(cpu_set_flag(C) == 0) {
+        cpu.cycles++;
+        cpu.addr_abs = cpu.PC + cpu.addr_rel;
+        if ((cpu.addr_abs & 0xFF00) != (cpu.PC & 0xFF00)) {
+            cpu.cycles++;
+        }
+        cpu.PC = cpu.addr_abs;
+    }
+    return 0;
+}
+
+uint8_t BEQ() {
+    if(cpu_set_flag(Z) == 1) {
+        cpu.cycles++;
+        cpu.addr_abs = cpu.PC + cpu.addr_rel;
+        if ((cpu.addr_abs & 0xFF00) != (cpu.PC & 0xFF00)) {
+            cpu.cycles++;
+        }
+        cpu.PC = cpu.addr_abs;
+    }
+    return 0;
+}
+
+uint8_t BMI() {
+    if(cpu_set_flag(N) == 1) {
+        cpu.cycles++;
+        cpu.addr_abs = cpu.PC + cpu.addr_rel;
+        if ((cpu.addr_abs & 0xFF00) != (cpu.PC & 0xFF00)) {
+            cpu.cycles++;
+        }
+        cpu.PC = cpu.addr_abs;
+    }
+    return 0;
+}
+
+uint8_t BNE() {
+    if(cpu_set_flag(Z) == 0) {
+        cpu.cycles++;
+        cpu.addr_abs = cpu.PC + cpu.addr_rel;
+        if ((cpu.addr_abs & 0xFF00) != (cpu.PC & 0xFF00)) {
+            cpu.cycles++;
+        }
+        cpu.PC = cpu.addr_abs;
+    }
+    return 0;
+}
+
+uint8_t BPL() {
+    if(cpu_set_flag(N) == 0) {
+        cpu.cycles++;
+        cpu.addr_abs = cpu.PC + cpu.addr_rel;
+        if ((cpu.addr_abs & 0xFF00) != (cpu.PC & 0xFF00)) {
+            cpu.cycles++;
+        }
+        cpu.PC = cpu.addr_abs;
+    }
+    return 0;
+}
+
+uint8_t BVC() {
+    if(cpu_set_flag(V) == 0) {
+        cpu.cycles++;
+        cpu.addr_abs = cpu.PC + cpu.addr_rel;
+        if ((cpu.addr_abs & 0xFF00) != (cpu.PC & 0xFF00)) {
+            cpu.cycles++;
+        }
+        cpu.PC = cpu.addr_abs;
+    }
+    return 0;
+}
+
+uint8_t BVS() {
+    if(cpu_set_flag(V) == 1) {
+        cpu.cycles++;
+        cpu.addr_abs = cpu.PC + cpu.addr_rel;
+        if ((cpu.addr_abs & 0xFF00) != (cpu.PC & 0xFF00)) {
+            cpu.cycles++;
+        }
+        cpu.PC = cpu.addr_abs;
+    }
+    return 0;
+}
+
+uint8_t CLC() {
+    cpu_set_flag(C, false);
+    return 0;
+}
+
+uint8_t CLD() {
+    cpu_set_flag(D, false);
+    return 0;
+}
+
+uint8_t CLI() {
+    cpu_set_flag(I, false);
+    return 0;
+}
+
+uint8_t CLV() {
+    cpu_set_flag(V, false);
+    return 0;
+}
+
+// A += M + C
+uint8_t ADC() {
+    cpu_fetch();
+    cpu.temp = (uint16_t)cpu.A + (uint16_t)cpu.fetched + (uint16_t) cpu_get_flag(C);
+    cpu_set_flag(C, cpu.temp > 255);
+    cpu_set_flag(Z, (cpu.temp & 0x0FF) == 0);
+    cpu_set_flag(V, (~((uint16_t)cpu.A ^ (uint16_t)cpu.fetched) & ((uint16_t)cpu.A ^ (uint16_t) cpu.temp)) & 0x0080);
+    cpu_set_flag(N, cpu.temp & 0x80);
+
+    cpu.A = cpu.temp & 0x00FF;
+    return 1;
+}
+
+uint8_t SBC() {
+    cpu_fetch();
+    uint16_t inverted = ((uint16_t )(cpu.fetched)) ^ 0x00FF;
+    cpu.temp = (uint16_t )cpu.A + inverted + (uint16_t )cpu_get_flag(C);
+    cpu_set_flag(C, cpu.temp & 0xFF00);
+    cpu_set_flag(Z, (cpu.temp & 0x00FF) == 0);
+    cpu_set_flag(V, (cpu.temp ^ (uint16_t)cpu.A) & (cpu.temp ^ inverted) & 0x0080);
+    cpu_set_flag(N, cpu.temp & 0x0080);
+    cpu.A = cpu.temp & 0x00FF;
+    return 1;
+}
+
+uint8_t PHA() {
+    cpu_write(0x0100 + cpu.SP, cpu.A);
+    cpu.SP--;
+    return 0;
+}
+
+uint8_t PLA() {
+    cpu.SP++;
+    cpu.A = cpu_read(0x0100 + cpu.SP);
+    cpu_set_flag(Z, cpu.A == 0x00);
+    cpu_set_flag(N, cpu.A & 0x80);
+    return 0;
+}
+
+void cpu_reset() {
+
+    cpu.A = 0x00;
+    cpu.X = 0x00;
+    cpu.Y = 0x00;
+    cpu.SP = 0xFD;
+    cpu.status = 0x00 | U;
+
+    cpu.addr_abs = 0xFFFC;
+    uint16_t lo = cpu_read(cpu.addr_abs + 0);
+    uint16_t hi = cpu_read(cpu.addr_abs + 1);
+
+    cpu.PC = (hi << 8) | lo;
+
+    cpu.addr_rel = 0x0000;
+    cpu.addr_abs = 0x0000;
+    cpu.fetched = 0x00;
+
+    cpu.cycles = 8;
+}
+
+void cpu_irq() {
+    if(cpu_get_flag(I) == 0) {
+        cpu_write(0x0100 + cpu.SP, (cpu.PC >> 8) & 0x00FF);
+        cpu.SP--;
+        cpu_write(0x0100 + cpu.SP, cpu.PC & 0x00FF);
+        cpu.SP--;
+
+        cpu_set_flag(B,0);
+        cpu_set_flag(U,1);
+        cpu_set_flag(I,1);
+        cpu_write(0x0100 + cpu.SP, cpu.status);
+        cpu.SP--;
+
+        cpu.addr_abs = 0xFFFE;
+        uint16_t lo = cpu_read(cpu.addr_abs + 0);
+        uint16_t hi = cpu_read(cpu.addr_abs + 1);
+        cpu.PC = (hi << 8) | lo;
+
+        cpu.cycles = 7;
+    }
+}
+
+void cpu_nmi() {
+    cpu_write(0x0100 + cpu.SP, (cpu.PC >> 8) & 0x00FF);
+    cpu.SP--;
+    cpu_write(0x0100 + cpu.SP, cpu.PC & 0x00FF);
+    cpu.SP--;
+
+    cpu_set_flag(B,0);
+    cpu_set_flag(U,1);
+    cpu_set_flag(I,1);
+    cpu_write(0x0100 + cpu.SP, cpu.status);
+    cpu.SP--;
+
+    cpu.addr_abs = 0xFFFE;
+    uint16_t lo = cpu_read(cpu.addr_abs + 0);
+    uint16_t hi = cpu_read(cpu.addr_abs + 1);
+    cpu.PC = (hi << 8) | lo;
+
+    cpu.cycles = 8;
+}
+
+uint8_t RTI() {
+    cpu.SP++;
+    cpu.status = cpu_read(0x0100 + cpu.SP);
+    cpu.status &= ~B;
+    cpu.status &= ~U;
+
+    cpu.SP++;
+    cpu.PC = (uint16_t)cpu_read(0x0100 + cpu.SP);
+    cpu.SP++;
+    cpu.PC |= (uint16_t)cpu_read(0x0100 + cpu.SP) << 8;
+
+}
