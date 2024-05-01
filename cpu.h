@@ -13,6 +13,9 @@ typedef struct {
     uint8_t Y; // index register y: Typically used as a loop counter or for pointer manipulation.
     uint8_t status; // status register
     uint8_t cycles;
+    uint8_t fetched;
+    uint16_t addr_abs;
+    uint16_t addr_rel
 } Cpu;
 
 typedef enum {

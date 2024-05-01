@@ -62,4 +62,139 @@ void cpu_clock() {
     cpu.cycles--;
 }
 
-//TODO: implement addressing modes
+//ADRESSING MODES
+
+//Implied: No data, doesn't need to do anything. Or operating upon the accumulator.
+uint8_t IMP() {
+    cpu.fetched = cpu.A;
+    return 0;
+}
+
+//Immediate Mode Adressing: Data is supplied, going to be the next byte.
+uint8_t IMM() {
+    cpu.addr_abs = cpu.PC++;
+    return 0;
+}
+
+//Zero Page Adressing
+uint8_t ZP0() {
+    cpu.addr_abs = cpu_read(cpu.PC);
+    cpu.PC++;
+    cpu.addr_abs &= 0x00FF;
+    return 0;
+}
+
+//Zero page adressing (X offset)
+uint8_t ZP0() {
+    cpu.addr_abs = cpu_read(cpu.PC) + cpu.X;
+    cpu.addr_abs &= 0x00FF;
+    return 0;
+}
+
+//Zero page adressing (Y offset)
+uint8_t ZP0() {
+    cpu.addr_abs = cpu_read(cpu.PC) + cpu.Y;
+    cpu.addr_abs &= 0x00FF;
+    return 0;
+}
+
+//Absolute Address
+uint8_t ABS() {
+    uint16_t lo = cpu_read(cpu.PC);
+    cpu.PC++;
+    uint16_t hi = cpu_read(cpu.PC);
+    cpu.PC++;
+
+    cpu.addr_abs = (hi << 8) | lo;
+}
+
+//Absolute Address (X)
+uint8_t ABX() {
+    uint16_t lo = cpu_read(cpu.PC);
+    cpu.PC++;
+    uint16_t hi = cpu_read(cpu.PC);
+    cpu.PC++;
+
+    cpu.addr_abs = ((hi << 8) | lo) + cpu.X;
+
+    // If the addr is in a new page, then we may need another clock cycle
+    if ((cpu.addr_abs & 0xFF00) != (hi << 8)) {
+        return 1;
+    }
+
+    return 0;
+}
+
+//Absolute Address (Y)
+uint8_t ABY() {
+    uint16_t lo = cpu_read(cpu.PC);
+    cpu.PC++;
+    uint16_t hi = cpu_read(cpu.PC);
+    cpu.PC++;
+
+    cpu.addr_abs = ((hi << 8) | lo) + cpu.Y;
+
+    // If the addr is in a new page, then we may need another clock cycle
+    if ((cpu.addr_abs & 0xFF00) != (hi << 8)) {
+        return 1;
+    }
+
+    return 0;
+}
+
+//Indirect Addressing
+uint8_t IND() {
+    uint16_t ptr_lo = cpu_read(cpu.PC);
+    cpu.PC++;
+    uint16_t ptr_hi = cpu_read(cpu.PC);
+    cpu.PC++;
+
+    //NES HARDWARE BUG HANDLING: Normally it would switch the page.
+    uint16_t ptr = (ptr_hi << 8) | ptr_lo;
+    if (ptr_lo == 0x00FF) {
+        cpu.addr_abs = (cpu_read(ptr & 0xFF00) << 8) | cpu_read(ptr + 0);
+    }
+        // Normal behaivour
+    else {
+        cpu.addr_abs = (cpu_read(ptr + 1) << 8) | cpu_read(ptr + 0);
+    }
+    return 0;
+}
+
+//Indirect Adressing of the Zero page with X offset
+uint8_t IZX() {
+    uint16_t t = cpu_read(cpu.PC);
+    cpu.PC++;
+    uint16_t lo = cpu_read((uint16_t)(t + (uint16_t)cpu.X) & 0x00FF);
+    uint16_t hi = cpu_read((uint16_t)(t + (uint16_t)cpu.X + 1) & 0x00FF);
+    cpu.addr_abs = (hi << 8) | lo;
+
+    return 0;
+}
+
+//Indirect Adressing of the Zero page with Y offset
+uint8_t IZY() {
+    uint16_t t = cpu_read(cpu.PC);
+    cpu.PC++;
+    uint16_t lo = cpu_read(t & 0x00FF);
+    uint16_t hi = cpu_read(t + 1) & 0x00FF);
+    cpu.addr_abs = ((hi << 8) | lo) + cpu.Y;
+    // If the addr is in a new page, then we may need another clock cycle
+    if ((cpu.addr_abs & 0xFF00) != (hi << 8)) {
+        return 1;
+    }
+    return 0;
+}
+
+//Relative addressing mode
+uint8_t REL() {
+    cpu.addr_rel = cpu_read(cpu.PC);
+    cpu.PC++;
+    if (cpu.addr_rel & 0x80) {      // 0x80 = 128. Checking 7th bit.
+        cpu.addr_rel |= 0xFF00;
+    }
+    return 0;
+}
+
+//TODO: implement instructions
+//INSTRUCTIONS
