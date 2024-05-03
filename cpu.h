@@ -31,7 +31,7 @@ typedef enum {
     N = (1 << 7),   // bit 7: Negative
 } CpuStatusFlag;
 
-void cpu_connect_bus(Bus *bus)
+void cpu_connect_bus(Bus *bus);
 void cpu_write(uint16_t addr, uint8_t data);
 uint8_t cpu_read(uint16_t addr);
 void cpu_clock();
