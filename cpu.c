@@ -112,6 +112,8 @@ uint8_t ABS() {
     cpu.PC++;
 
     cpu.addr_abs = (hi << 8) | lo;
+
+    return 0;
 }
 
 //Absolute Address (X)
@@ -449,4 +451,234 @@ uint8_t RTI() {
     cpu.SP++;
     cpu.PC |= (uint16_t)cpu_read(0x0100 + cpu.SP) << 8;
 
+    return 0;
 }
+
+// TODO: Instructions that weren't covered in the video:
+
+uint8_t ASL() {
+    cpu_fetch();
+    cpu.temp = (uint16_t)cpu.fetched << 1;
+    cpu_set_flag(C, (cpu.temp & 0xFF00) > 0);
+    cpu_set_flag(Z, (cpu.temp & 0x00FF) == 0x00);
+    cpu_set_flag(N, cpu.temp & 0x80);
+    if (LOOKUP[cpu.opcode].addrmode == IMP)
+        cpu.A = cpu.temp & 0x00FF;
+    else
+        cpu_write(cpu.addr_abs, cpu.temp & 0x00FF);
+    return 0;
+}
+
+uint8_t BIT() {
+    cpu_fetch();
+    cpu.temp = cpu.A & cpu.fetched;
+    cpu_set_flag(Z, (cpu.temp & 0x00FF) == 0x00);
+    cpu_set_flag(N, cpu.fetched & (1 << 7));
+    cpu_set_flag(V, cpu.fetched & (1 << 6));
+    return 0;
+}
+
+uint8_t BRK() {
+    cpu.PC++;
+
+    cpu_set_flag(I, 1);
+    cpu_write(0x0100 + cpu.SP, (cpu.PC >> 8) & 0x00FF);
+    cpu.SP--;
+    cpu_write(0x0100 + cpu.SP, cpu.PC & 0x00FF);
+    cpu.SP--;
+
+    cpu_set_flag(B, 1);
+    cpu_write(0x0100 + cpu.SP, cpu.status);
+    cpu.SP--;
+    cpu_set_flag(B, 0);
+
+    cpu.PC = (uint16_t) cpu_read(0xFFFE) | ((uint16_t) cpu_read(0xFFFF) << 8);
+    return 0;
+}
+
+uint8_t CMP() {
+    cpu_fetch();
+    cpu.temp = (uint16_t)cpu.A - (uint16_t)cpu.fetched;
+    cpu_set_flag(C, cpu.A >= cpu.fetched);
+    cpu_set_flag(Z, (cpu.temp & 0x00FF) == 0x0000);
+    cpu_set_flag(N, cpu.temp & 0x0080);
+    return 1;
+}
+
+uint8_t CPX() {
+    cpu_fetch();
+    cpu.temp = (uint16_t)cpu.X - (uint16_t)cpu.fetched;
+    cpu_set_flag(C, cpu.X >= cpu.fetched);
+    cpu_set_flag(Z, (cpu.temp & 0x00FF) == 0x0000);
+    cpu_set_flag(N, cpu.temp & 0x0080);
+    return 0;
+}
+
+uint8_t CPY() {
+    cpu_fetch();
+    cpu.temp = (uint16_t)cpu.Y - (uint16_t)cpu.fetched;
+    cpu_set_flag(C, cpu.Y >= cpu.fetched);
+    cpu_set_flag(Z, (cpu.temp & 0x00FF) == 0x0000);
+    cpu_set_flag(N, cpu.temp & 0x0080);
+    return 0;
+}
+
+uint8_t DEC() {
+    cpu_fetch();
+    cpu.temp = cpu.fetched - 1;
+    cpu_write(cpu.addr_abs, cpu.temp & 0x00FF);
+    cpu_set_flag(Z, (cpu.temp & 0x00FF) == 0x0000);
+    cpu_set_flag(N, cpu.temp & 0x0080);
+    return 0;
+}
+
+uint8_t DEX() {
+    cpu.X--;
+    cpu_set_flag(Z, cpu.X == 0x00);
+    cpu_set_flag(N, cpu.X & 0x80);
+    return 0;
+}
+
+uint8_t DEY() {
+    cpu.Y--;
+    cpu_set_flag(Z, cpu.Y == 0x00);
+    cpu_set_flag(N, cpu.Y & 0x80);
+    return 0;
+}
+
+uint8_t EOR() {
+    cpu_fetch();
+    cpu.A = cpu.A ^ cpu.fetched;
+    cpu_set_flag(Z, cpu.A == 0x00);
+    cpu_set_flag(N, cpu.A & 0x80);
+    return 1;
+}
+
+uint8_t INC() {
+    cpu_fetch();
+    cpu.temp = cpu.fetched + 1;
+    cpu_write(cpu.addr_abs, cpu.temp & 0x00FF);
+    cpu_set_flag(Z, (cpu.temp & 0x00FF) == 0x0000);
+    cpu_set_flag(N, cpu.temp & 0x0080);
+    return 0;
+}
+
+uint8_t INX() {
+    cpu.X++;
+    cpu_set_flag(Z, cpu.X == 0x00);
+    cpu_set_flag(N, cpu.X & ox80);
+    return 0;
+}
+
+uint8_t INY() {
+    cpu.Y++;
+    cpu_set_flag(Z, cpu.Y == 0x00);
+    cpu_set_flag(N, cpu.Y & ox80);
+    return 0;
+}
+
+uint8_t JMP() {
+    cpu.PC = cpu.addr_abs;
+    return 0;
+}
+
+uint8_t JSR() {
+    cpu.PC--;
+    cpu_write(0x0100 + cpu.SP, (cpu.PC >> 8) & 0x00FF);
+    cpu.SP--;
+    cpu_write(0x0100 + cpu.SP, cpu.PC & 0x00FF);
+    cpu.SP--;
+
+    cpu.PC = cpu.addr_abs;
+    return 0;
+}
+
+uint8_t LDA() {
+    cpu_fetch();
+    cpu.A = cpu.fetched;
+    cpu_set_flag(Z, cpu.A == 0x00);
+    cpu_set_flag(N, cpu.A & 0x80);
+    return 1;
+}
+
+uint8_t LDX() {
+    cpu_fetch();
+    cpu.X = cpu.fetched;
+    cpu_set_flag(Z, cpu.X == 0x00);
+    cpu_set_flag(N, cpu.X & 0x80);
+    return 1;
+}
+
+uint8_t LDY() {
+    cpu_fetch();
+    cpu.Y = cpu.fetched;
+    cpu_set_flag(Z, cpu.Y == 0x00);
+    cpu_set_flag(N, cpu.Y & 0x80);
+    return 1;
+}
+
+uint8_t LSR() {
+    cpu_fetch();
+    cpu_set_flag(C, cpu.fetched & 0x0001);
+    cpu.temp = cpu.fetched >> 1;
+    cpu_set_flag(Z, (cpu.temp & 0x00FF) == 0x0000);
+    cpu_set_flag(N, cpu.temp & 0x0080);
+
+    if  (LOOKUP[cpu.opcode].addrmode == IMP)
+        cpu.A = cpu.temp & 0x00FF;
+    else
+        cpu_write(cpu.addr_abs, cpu.temp & 0x00FF);
+    return 0;
+}
+
+uint8_t NOP() {
+    switch (cpu.opcode) {
+        case 0x1C:
+        case 0x3C:
+        case 0x5C:
+        case 0x7C:
+        case 0xDC:
+        case 0xFC:
+            return 1;
+        default:
+            break;
+    }
+    return 0;
+}
+
+uint8_t ORA() {
+    cpu_fetch();
+    cpu.A = cpu.A | cpu.fetched;
+    cpu_set_flag(Z, cpu.A == 0x00);
+    cpu_set_flag(N, cpu.A & 0x80);
+    return 1;
+}
+
+uint8_t PHP() {
+    cpu_write(0x0100 + cpu.SP, cpu.status | B | U );
+    cpu_set_flag(B, 0);
+    cpu_set_flag(U, 0);
+    cpu.SP--;
+    return 0;
+}
+
+uint8_t PLP() {
+    cpu.SP++;
+    cpu.status = cpu_read(0x0100 + cpu.SP);
+    cpu_set_flag(U, 1);
+    return 0;
+}
+
+uint8_t ROL() {
+    cpu_fetch();
+    cpu.temp = (uint16_t)(cpu.fetched << 1) | cpu_get_flag(C);
+    cpu_set_flag(C, cpu.temp & 0xFF00);
+    cpu_set_flag(Z, (cpu.temp & 0x00FF) == 0x0000);
+    cpu_set_flag(N, cpu.temp & 0x0080);
+    if (LOOKUP[cpu.opcode].addrmode == IMP)
+        cpu.A = cpu.temp & 0x00FF;
+    else
+        cpu_write(cpu.addr_abs, cpu.temp & 0x00FF);
+    return 0;
+}
+
