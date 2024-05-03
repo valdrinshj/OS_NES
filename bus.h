@@ -3,16 +3,21 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "ppu.h"
+#include "cpu.h"
 
 typedef struct{
-
+    Cpu cpu;
+    Ppu ppu;
+    uint8_t cpuRam[2048];
 } Bus;
 
 
 //Functions
 
-uint8_t BusRead(Bus *bus, uint16_t addr);
-void BusWrite(Bus *bus, uint16_t addr, uint8_t data);
+void cpuWrite(uint16_t addr, uint8_t data);
+uint8_t cpuRead(uint16_t addr, bool bReadOnly);
+
 // void NesReset(Bus *bus);
 // void NesClock(Bus *bus);
 #endif

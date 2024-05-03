@@ -31,7 +31,7 @@ static CpuInstruction LOOKUP [16*16]= {
 };
 
 uint8_t cpu_read(uint16_t addr) {
-    return BusRead(cpu.bus, addr);
+    return cpuRead(cpu.bus, addr);
 }
 
 void cpu_write(uint16_t addr, uint8_t data) {
