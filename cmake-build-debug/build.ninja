@@ -67,6 +67,18 @@ build CMakeFiles/Project.dir/bus.c.o: C_COMPILER__Project_unscanned_Debug /Users
   OBJECT_DIR = CMakeFiles/Project.dir
   OBJECT_FILE_DIR = CMakeFiles/Project.dir
 
+build CMakeFiles/Project.dir/cartridge.c.o: C_COMPILER__Project_unscanned_Debug /Users/valdrin/Desktop/Operating$ Systems/Project/cartridge.c || cmake_object_order_depends_target_Project
+  DEP_FILE = CMakeFiles/Project.dir/cartridge.c.o.d
+  FLAGS = -g -std=gnu11 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fcolor-diagnostics
+  OBJECT_DIR = CMakeFiles/Project.dir
+  OBJECT_FILE_DIR = CMakeFiles/Project.dir
+
+build CMakeFiles/Project.dir/ppu.c.o: C_COMPILER__Project_unscanned_Debug /Users/valdrin/Desktop/Operating$ Systems/Project/ppu.c || cmake_object_order_depends_target_Project
+  DEP_FILE = CMakeFiles/Project.dir/ppu.c.o.d
+  FLAGS = -g -std=gnu11 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fcolor-diagnostics
+  OBJECT_DIR = CMakeFiles/Project.dir
+  OBJECT_FILE_DIR = CMakeFiles/Project.dir
+
 
 # =============================================================================
 # Link build statements for EXECUTABLE target Project
@@ -75,7 +87,7 @@ build CMakeFiles/Project.dir/bus.c.o: C_COMPILER__Project_unscanned_Debug /Users
 #############################################
 # Link the executable Project
 
-build Project: C_EXECUTABLE_LINKER__Project_Debug CMakeFiles/Project.dir/main.c.o CMakeFiles/Project.dir/cpu.c.o CMakeFiles/Project.dir/bus.c.o
+build Project: C_EXECUTABLE_LINKER__Project_Debug CMakeFiles/Project.dir/main.c.o CMakeFiles/Project.dir/cpu.c.o CMakeFiles/Project.dir/bus.c.o CMakeFiles/Project.dir/cartridge.c.o CMakeFiles/Project.dir/ppu.c.o
   FLAGS = -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk
   OBJECT_DIR = CMakeFiles/Project.dir
   POST_BUILD = :

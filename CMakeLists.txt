@@ -8,4 +8,7 @@ add_executable(Project main.c
         cpu.c
         bus.h
         bus.c
+        cartridge.c
+        cartridge.h
+        ppu.c
 )

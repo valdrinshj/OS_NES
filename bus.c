@@ -21,3 +21,14 @@ uint8_t cpuRead(uint16_t addr, bool bReadOnly) {
     }
     return data;
 }
+void NesInsertCartridge(Bus *bus, Cartridge *cartridge) {
+    bus->cartridge = cartridge;
+    PpuConnectCartridge(cartridge)
+}
+void NesReset(Bus *bus) {
+    cpu_reset();
+    nSystemClockCounter = 0;
+}
+void NesClock(Bus *bus) {
+
+}
