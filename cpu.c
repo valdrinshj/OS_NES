@@ -1,14 +1,16 @@
 #include "cpu.h"
 
+//Initialize Cpu
+static Cpu cpu = {0};
 
 typedef struct {
     char name[4];
     uint8_t (*operate)(void);
-    uint8_t 8 (*addrmode)(void);
-    uint8_t 8 cycles;
+    uint8_t (*addrmode)(void);
+    uint8_t cycles;
 } CpuInstruction;
 
-//List of cpu instructions {"mnemonic", implement function, addressmode, clock cycles}
+//List of cpu instructions {"mnemonic", implement function, address mode, clock cycles}
 static CpuInstruction LOOKUP [16*16]= {
         { "BRK", BRK, IMP, 7 },{ "ORA", ORA, IZX, 6 },{ "???", XXX, IMP, 2 },{ "???", XXX, IMP, 8 },{ "???", NOP, IMP, 3 },{ "ORA", ORA, ZP0, 3 },{ "ASL", ASL, ZP0, 5 },{ "???", XXX, IMP, 5 },{ "PHP", PHP, IMP, 3 },{ "ORA", ORA, IMM, 2 },{ "ASL", ASL, IMP, 2 },{ "???", XXX, IMP, 2 },{ "???", NOP, IMP, 4 },{ "ORA", ORA, ABS, 4 },{ "ASL", ASL, ABS, 6 },{ "???", XXX, IMP, 6 },
         { "BPL", BPL, REL, 2 },{ "ORA", ORA, IZY, 5 },{ "???", XXX, IMP, 2 },{ "???", XXX, IMP, 8 },{ "???", NOP, IMP, 4 },{ "ORA", ORA, ZPX, 4 },{ "ASL", ASL, ZPX, 6 },{ "???", XXX, IMP, 6 },{ "CLC", CLC, IMP, 2 },{ "ORA", ORA, ABY, 4 },{ "???", NOP, IMP, 2 },{ "???", XXX, IMP, 7 },{ "???", NOP, IMP, 4 },{ "ORA", ORA, ABX, 4 },{ "ASL", ASL, ABX, 7 },{ "???", XXX, IMP, 7 },
@@ -52,7 +54,7 @@ uint8_t cpu_get_flag(CpuStatusFlag flag) {
 void cpu_clock() {
     if (cpu.cycles ==  0) {
         cpu.opcode = cpu_read(cpu.PC);
-        CpuSetFlag(U, true);
+        cpu_set_flag(U, true);
         cpu.PC++;
 
         //Get starting number of cycles
@@ -61,12 +63,12 @@ void cpu_clock() {
         uint8_t  addrmode_additional_cycle = instruction.addrmode();
         uint8_t operate_additional_cycle = instruction.operate();
         cpu.cycles += addrmode_additional_cycle & operate_additional_cycle;
-        CpuSetFlag(U, true);
+        cpu_set_flag(U, true);
     }
     cpu.cycles--;
 }
 
-//ADRESSING MODES
+//ADDRESSING MODES
 
 //Implied: No data, doesn't need to do anything. Or operating upon the accumulator.
 uint8_t IMP() {
@@ -74,13 +76,13 @@ uint8_t IMP() {
     return 0;
 }
 
-//Immediate Mode Adressing: Data is supplied, going to be the next byte.
+//Immediate Mode Addressing: Data is supplied, going to be the next byte.
 uint8_t IMM() {
     cpu.addr_abs = cpu.PC++;
     return 0;
 }
 
-//Zero Page Adressing
+//Zero Page Addressing
 uint8_t ZP0() {
     cpu.addr_abs = cpu_read(cpu.PC);
     cpu.PC++;
@@ -88,15 +90,15 @@ uint8_t ZP0() {
     return 0;
 }
 
-//Zero page adressing (X offset)
-uint8_t ZP0() {
+//Zero page addressing (X offset)
+uint8_t ZPX() {
     cpu.addr_abs = cpu_read(cpu.PC) + cpu.X;
     cpu.addr_abs &= 0x00FF;
     return 0;
 }
 
-//Zero page adressing (Y offset)
-uint8_t ZP0() {
+//Zero page addressing (Y offset)
+uint8_t ZPY() {
     cpu.addr_abs = cpu_read(cpu.PC) + cpu.Y;
     cpu.addr_abs &= 0x00FF;
     return 0;
@@ -158,14 +160,14 @@ uint8_t IND() {
     if (ptr_lo == 0x00FF) {
         cpu.addr_abs = (cpu_read(ptr & 0xFF00) << 8) | cpu_read(ptr + 0);
     }
-        // Normal behaivour
+        // Normal behaviour
     else {
         cpu.addr_abs = (cpu_read(ptr + 1) << 8) | cpu_read(ptr + 0);
     }
     return 0;
 }
 
-//Indirect Adressing of the Zero page with X offset
+//Indirect Addressing of the Zero page with X offset
 uint8_t IZX() {
     uint16_t t = cpu_read(cpu.PC);
     cpu.PC++;
@@ -176,12 +178,12 @@ uint8_t IZX() {
     return 0;
 }
 
-//Indirect Adressing of the Zero page with Y offset
+//Indirect Addressing of the Zero page with Y offset
 uint8_t IZY() {
     uint16_t t = cpu_read(cpu.PC);
     cpu.PC++;
     uint16_t lo = cpu_read(t & 0x00FF);
-    uint16_t hi = cpu_read(t + 1) & 0x00FF);
+    uint16_t hi = cpu_read((t + 1) & 0x00FF);
     cpu.addr_abs = ((hi << 8) | lo) + cpu.Y;
     // If the addr is in a new page, then we may need another clock cycle
     if ((cpu.addr_abs & 0xFF00) != (hi << 8)) {
@@ -219,7 +221,7 @@ uint8_t AND() {
 }
 
 uint8_t BCS() {
-    if(cpu_set_flag(C) == 1) {
+    if(cpu_get_flag(C) == 1) {
         cpu.cycles++;
         cpu.addr_abs = cpu.PC + cpu.addr_rel;
         if ((cpu.addr_abs & 0xFF00) != (cpu.PC & 0xFF00)) {
@@ -231,7 +233,7 @@ uint8_t BCS() {
 }
 
 uint8_t BCC() {
-    if(cpu_set_flag(C) == 0) {
+    if(cpu_get_flag(C) == 0) {
         cpu.cycles++;
         cpu.addr_abs = cpu.PC + cpu.addr_rel;
         if ((cpu.addr_abs & 0xFF00) != (cpu.PC & 0xFF00)) {
@@ -243,7 +245,7 @@ uint8_t BCC() {
 }
 
 uint8_t BEQ() {
-    if(cpu_set_flag(Z) == 1) {
+    if(cpu_get_flag(Z) == 1) {
         cpu.cycles++;
         cpu.addr_abs = cpu.PC + cpu.addr_rel;
         if ((cpu.addr_abs & 0xFF00) != (cpu.PC & 0xFF00)) {
@@ -255,7 +257,7 @@ uint8_t BEQ() {
 }
 
 uint8_t BMI() {
-    if(cpu_set_flag(N) == 1) {
+    if(cpu_get_flag(N) == 1) {
         cpu.cycles++;
         cpu.addr_abs = cpu.PC + cpu.addr_rel;
         if ((cpu.addr_abs & 0xFF00) != (cpu.PC & 0xFF00)) {
@@ -267,7 +269,7 @@ uint8_t BMI() {
 }
 
 uint8_t BNE() {
-    if(cpu_set_flag(Z) == 0) {
+    if(cpu_get_flag(Z) == 0) {
         cpu.cycles++;
         cpu.addr_abs = cpu.PC + cpu.addr_rel;
         if ((cpu.addr_abs & 0xFF00) != (cpu.PC & 0xFF00)) {
@@ -279,7 +281,7 @@ uint8_t BNE() {
 }
 
 uint8_t BPL() {
-    if(cpu_set_flag(N) == 0) {
+    if(cpu_get_flag(N) == 0) {
         cpu.cycles++;
         cpu.addr_abs = cpu.PC + cpu.addr_rel;
         if ((cpu.addr_abs & 0xFF00) != (cpu.PC & 0xFF00)) {
@@ -291,7 +293,7 @@ uint8_t BPL() {
 }
 
 uint8_t BVC() {
-    if(cpu_set_flag(V) == 0) {
+    if(cpu_get_flag(V) == 0) {
         cpu.cycles++;
         cpu.addr_abs = cpu.PC + cpu.addr_rel;
         if ((cpu.addr_abs & 0xFF00) != (cpu.PC & 0xFF00)) {
@@ -303,7 +305,7 @@ uint8_t BVC() {
 }
 
 uint8_t BVS() {
-    if(cpu_set_flag(V) == 1) {
+    if(cpu_get_flag(V) == 1) {
         cpu.cycles++;
         cpu.addr_abs = cpu.PC + cpu.addr_rel;
         if ((cpu.addr_abs & 0xFF00) != (cpu.PC & 0xFF00)) {

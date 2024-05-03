@@ -17,6 +17,7 @@ typedef struct {
     uint16_t addr_abs;
     uint16_t addr_rel;
     uint16_t temp;
+    uint8_t opcode;
 } Cpu;
 
 typedef enum {
@@ -29,7 +30,6 @@ typedef enum {
     V = (1 << 6),   // bit 6: Overflow
     N = (1 << 7),   // bit 7: Negative
 } CpuStatusFlag;
-extern struct cpu cpu;
 
 void cpu_connect_bus(Bus *bus)
 void cpu_write(uint16_t addr, uint8_t data);
@@ -46,7 +46,7 @@ void cpu_init(void);
 
 //Addressing modes
 uint8_t IMP();
-uint8_t ZPO();
+uint8_t ZP0();
 uint8_t ZPY();
 uint8_t ABS();
 uint8_t ABY();
