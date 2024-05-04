@@ -152,6 +152,30 @@ bus.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Project.dir\build.make CMakeFiles/Project.dir/bus.c.s
 .PHONY : bus.c.s
 
+cartridge.obj: cartridge.c.obj
+.PHONY : cartridge.obj
+
+# target to build an object file
+cartridge.c.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Project.dir\build.make CMakeFiles/Project.dir/cartridge.c.obj
+.PHONY : cartridge.c.obj
+
+cartridge.i: cartridge.c.i
+.PHONY : cartridge.i
+
+# target to preprocess a source file
+cartridge.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Project.dir\build.make CMakeFiles/Project.dir/cartridge.c.i
+.PHONY : cartridge.c.i
+
+cartridge.s: cartridge.c.s
+.PHONY : cartridge.s
+
+# target to generate assembly for a file
+cartridge.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Project.dir\build.make CMakeFiles/Project.dir/cartridge.c.s
+.PHONY : cartridge.c.s
+
 cpu.obj: cpu.c.obj
 .PHONY : cpu.obj
 
@@ -200,6 +224,30 @@ main.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Project.dir\build.make CMakeFiles/Project.dir/main.c.s
 .PHONY : main.c.s
 
+ppu.obj: ppu.c.obj
+.PHONY : ppu.obj
+
+# target to build an object file
+ppu.c.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Project.dir\build.make CMakeFiles/Project.dir/ppu.c.obj
+.PHONY : ppu.c.obj
+
+ppu.i: ppu.c.i
+.PHONY : ppu.i
+
+# target to preprocess a source file
+ppu.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Project.dir\build.make CMakeFiles/Project.dir/ppu.c.i
+.PHONY : ppu.c.i
+
+ppu.s: ppu.c.s
+.PHONY : ppu.s
+
+# target to generate assembly for a file
+ppu.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Project.dir\build.make CMakeFiles/Project.dir/ppu.c.s
+.PHONY : ppu.c.s
+
 # Help Target
 help:
 	@echo The following are some of the valid targets for this Makefile:
@@ -212,12 +260,18 @@ help:
 	@echo ... bus.obj
 	@echo ... bus.i
 	@echo ... bus.s
+	@echo ... cartridge.obj
+	@echo ... cartridge.i
+	@echo ... cartridge.s
 	@echo ... cpu.obj
 	@echo ... cpu.i
 	@echo ... cpu.s
 	@echo ... main.obj
 	@echo ... main.i
 	@echo ... main.s
+	@echo ... ppu.obj
+	@echo ... ppu.i
+	@echo ... ppu.s
 .PHONY : help
 
 

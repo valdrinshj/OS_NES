@@ -82,6 +82,12 @@
 		<Unit filename="C:/Users/Startklar/CLionProjects/OS_NES/bus.h">
 			<Option target="Project"/>
 		</Unit>
+		<Unit filename="C:/Users/Startklar/CLionProjects/OS_NES/cartridge.c">
+			<Option target="Project"/>
+		</Unit>
+		<Unit filename="C:/Users/Startklar/CLionProjects/OS_NES/cartridge.h">
+			<Option target="Project"/>
+		</Unit>
 		<Unit filename="C:/Users/Startklar/CLionProjects/OS_NES/cpu.c">
 			<Option target="Project"/>
 		</Unit>
@@ -89,6 +95,12 @@
 			<Option target="Project"/>
 		</Unit>
 		<Unit filename="C:/Users/Startklar/CLionProjects/OS_NES/main.c">
+			<Option target="Project"/>
+		</Unit>
+		<Unit filename="C:/Users/Startklar/CLionProjects/OS_NES/ppu.c">
+			<Option target="Project"/>
+		</Unit>
+		<Unit filename="C:/Users/Startklar/CLionProjects/OS_NES/ppu.h">
 			<Option target="Project"/>
 		</Unit>
 		<Unit filename="C:/Users/Startklar/CLionProjects/OS_NES/CMakeLists.txt">

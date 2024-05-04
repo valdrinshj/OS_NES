@@ -682,3 +682,100 @@ uint8_t ROL() {
     return 0;
 }
 
+uint8_t ROR() {
+    cpu_fetch();
+    cpu.temp = (uint16_t)(cpu_get_flag(C) << 7) | (cpu.fetched >> 1);
+    cpu_set_flag(C, cpu.fetched & 0x01);
+    cpu_set_flag(Z, (cpu.temp & 0x00FF) == 0x00);
+    cpu_set_flag(N, cpu.temp & 0x0080);
+    if (LOOKUP[cpu.opcode].addrmode == IMP)
+        cpu.A = cpu.temp & 0x00FF;
+    else
+        cpu_write(cpu.addr_abs, cpu.temp & 0x00FF);
+    return 0;
+}
+
+uint8_t RTS() {
+    cpu.SP++;
+    cpu.PC = (uint16_t) cpu_read(0x0100 + cpu.SP);
+    cpu.SP++;
+    cpu.SP |= (uint16_t) cpu_read(0x0100 + cpu.SP) << 8;
+    cpu.PC++;
+    return 0;
+}
+
+uint8_t SEC() {
+    cpu_set_flag(C, true);
+    return 0;
+}
+
+uint8_t SED() {
+    cpu_set_flag(D, true);
+    return 0;
+}
+
+uint8_t SEI() {
+    cpu_set_flag(I, true);
+    return 0;
+}
+
+uint8_t STA() {
+    cpu_write(cpu.addr_abs, cpu.A);
+    return 0;
+}
+
+uint8_t STX() {
+    cpu_write(cpu.addr_abs, cpu.X);
+    return 0;
+}
+
+uint8_t STY() {
+    cpu_write(cpu.addr_abs, cpu.Y);
+    return 0;
+}
+
+uint8_t TAX() {
+    cpu.X = cpu.A;
+    cpu_set_flag(Z, cpu.X == 0x00);
+    cpu_set_flag(N, cpu.X & 0x80);
+    return 0;
+}
+
+uint8_t TAY() {
+    cpu.Y = cpu.A;
+    cpu_set_flag(Z, cpu.Y == 0x00);
+    cpu_set_flag(N, cpu.Y & 0x80);
+    return 0;
+}
+
+uint8_t TSX() {
+    cpu.X = cpu.SP;
+    cpu_set_flag(Z, cpu.X == 0x00);
+    cpu_set_flag(N, cpu.X & 0x80);
+    return 0;
+}
+
+uint8_t TXA() {
+    cpu.A = cpu.X;
+    cpu_set_flag(Z, cpu.A == 0x00);
+    cpu_set_flag(N, cpu.A & 0x80);
+    return 0;
+}
+
+uint8_t TXS() {
+    cpu.SP = cpu.X;
+    return 0;
+}
+
+uint8_t TYA() {
+    cpu.A = cpu.Y;
+    cpu_set_flag(Z, cpu.A == 0x00);
+    cpu_set_flag(N, cpu.A & 0x80);
+    return 0;
+}
+
+uint8_t XXX() {
+    return 0;
+}
+
+
