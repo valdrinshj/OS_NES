@@ -35,7 +35,7 @@ uint8_t cpu_read(uint16_t addr) {
 }
 
 void cpu_write(uint16_t addr, uint8_t data) {
-    BusWrite(cpu.bus, addr, data);
+    Bus(cpu.bus, addr, data);
 }
 
 void cpu_set_flag(CpuStatusFlag flag, bool one) {
@@ -566,14 +566,14 @@ uint8_t INC() {
 uint8_t INX() {
     cpu.X++;
     cpu_set_flag(Z, cpu.X == 0x00);
-    cpu_set_flag(N, cpu.X & ox80);
+    cpu_set_flag(N, cpu.X & 0x80);
     return 0;
 }
 
 uint8_t INY() {
     cpu.Y++;
     cpu_set_flag(Z, cpu.Y == 0x00);
-    cpu_set_flag(N, cpu.Y & ox80);
+    cpu_set_flag(N, cpu.Y & 0x80);
     return 0;
 }
 
