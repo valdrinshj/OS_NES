@@ -31,11 +31,11 @@ static CpuInstruction LOOKUP [16*16]= {
 };
 
 uint8_t cpu_read(uint16_t addr) {
-    return cpuRead(cpu.bus, addr);
+    return busRead(cpu.bus, addr);
 }
 
 void cpu_write(uint16_t addr, uint8_t data) {
-    Bus(cpu.bus, addr, data);
+    busWrite(cpu.bus, addr, data);
 }
 
 void cpu_set_flag(CpuStatusFlag flag, bool one) {

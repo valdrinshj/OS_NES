@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
+#include "mapper000.h"
 
 typedef struct {
     uint8_t *items;
@@ -17,6 +18,7 @@ typedef struct {
     uint8_t nMapperID;
     uint8_t nPRGBanks; //sections of ROM --> different section's of the game code and data are divided into banks
     uint8_t nCHRBanks; // the same for CHRBanks, but here graphics data is divided
+    Mapper000 *mapper000;
 
 }Cartridge;
 

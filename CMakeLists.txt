@@ -11,4 +11,6 @@ add_executable(Project main.c
         cartridge.c
         cartridge.h
         ppu.c
+        mapper000.h
+        mapper000.c
 )

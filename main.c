@@ -1,6 +1,5 @@
 #include <stdio.h>
-
+#include "cpu.h"
 int main() {
-    printf("Hello, Shane!\n");
-    return 0;
+    cpu_init();
 }

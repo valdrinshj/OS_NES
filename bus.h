@@ -21,8 +21,8 @@ uint32_t nSystemClockCounter = 0;
 
 //Functions
 
-void cpuWrite(uint16_t addr, uint8_t data);
-uint8_t cpuRead(uint16_t addr, bool bReadOnly);
+void busWrite(Bus *bus, uint16_t addr, uint8_t data);
+uint8_t busRead(Bus *bus, uint16_t addr);
 
 void NesInsertCartridge(Bus *bus, Cartridge *cartridge);
 void NesReset(Bus *bus);
