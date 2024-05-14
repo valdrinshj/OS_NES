@@ -1,7 +1,14 @@
 #include "bus.h"
 #include "ppu.h"
-
+#include "raylib.h"
 static Ppu ppu = {0};
+
+void ppuInit() {
+
+}
+Color ColorBuild(uint8_t r, uint8_t g, uint8_t b) {
+    return (Color){r,g,b,255};
+}
 
 uint8_t cpuReadFromPpu(uint16_t addr, bool bReadOnly) {
     uint8_t data = 0x00;
