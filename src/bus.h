@@ -4,12 +4,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "ppu.h"
-#include "cpu.h"
 #include "cartridge.h"
 
 
 typedef struct{
-    Cpu cpu;
+    // Cpu cpu;
     Ppu ppu;
     uint8_t cpuRam[2048];
     Cartridge *cartridge;
@@ -17,7 +16,7 @@ typedef struct{
 } Bus;
 
 // A count of how many clocks have passed
-uint32_t nSystemClockCounter = 0;
+// uint32_t nSystemClockCounter = 0;
 
 //Functions
 

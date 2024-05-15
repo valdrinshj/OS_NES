@@ -17,6 +17,10 @@ typedef struct {
 
 Cartridge *CartridgeCreate(const char *fileName) {
     FILE *fd = fopen(fileName, "rb"); //opens rom in binary mode for reading
+    if (fd == NULL) {
+        fprintf(stderr, "Error opening '%s' file\n", fileName);
+        exit(1);
+    }
     Header header = {0};
     Mapper000 *mapper = (Mapper000*)malloc(sizeof(Mapper000));
     size_t bytes = fread(&header, sizeof(header), 1, fd); // read file header

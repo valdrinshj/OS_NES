@@ -22,10 +22,10 @@ void NesInsertCartridge(Bus *bus, Cartridge *cartridge) {
     bus->cartridge = cartridge;
     PpuConnectCartridge(cartridge);
 }
-void NesReset(Bus *bus) {
-    cpu_reset();
-    nSystemClockCounter = 0;
-}
+//void NesReset(Bus *bus) {
+    //cpu_reset();
+    // nSystemClockCounter = 0;
+//}
 void NesClock(Bus *bus) {
 
 }

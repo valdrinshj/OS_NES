@@ -30,6 +30,27 @@ static CpuInstruction LOOKUP [16*16]= {
         { "BEQ", BEQ, REL, 2 },{ "SBC", SBC, IZY, 5 },{ "???", XXX, IMP, 2 },{ "???", XXX, IMP, 8 },{ "???", NOP, IMP, 4 },{ "SBC", SBC, ZPX, 4 },{ "INC", INC, ZPX, 6 },{ "???", XXX, IMP, 6 },{ "SED", SED, IMP, 2 },{ "SBC", SBC, ABY, 4 },{ "NOP", NOP, IMP, 2 },{ "???", XXX, IMP, 7 },{ "???", NOP, IMP, 4 },{ "SBC", SBC, ABX, 4 },{ "INC", INC, ABX, 7 },{ "???", XXX, IMP, 7 },
 };
 
+Cpu *cpu_get() {
+    return &cpu;
+}
+void cpu_init() {
+    cpu.bus = NULL;
+    cpu.PC = 0x0000;
+    cpu.SP = 0x00;
+    cpu.A = 0x00;
+    cpu.X = 0x00;
+    cpu.Y = 0x00;
+    cpu.status = 0;   // CPU Status set all flags to 0
+    cpu.cycles = 0;
+    cpu.fetched = 0x00;
+    cpu.addr_abs = 0x0000;
+    cpu.addr_rel = 0x0000;
+    cpu.opcode = 0x00;
+}
+void cpu_connect_bus(Bus *bus) {
+    cpu.bus = bus;
+}
+
 uint8_t cpu_read(uint16_t addr) {
     return busRead(cpu.bus, addr);
 }
@@ -398,7 +419,7 @@ void cpu_reset() {
     cpu.cycles = 8;
 }
 
-void cpu_irq() {
+void cpu_interrupt_request() {
     if(cpu_get_flag(I) == 0) {
         cpu_write(0x0100 + cpu.SP, (cpu.PC >> 8) & 0x00FF);
         cpu.SP--;
@@ -420,7 +441,7 @@ void cpu_irq() {
     }
 }
 
-void cpu_nmi() {
+void cpu_non_mask_interrupt() {
     cpu_write(0x0100 + cpu.SP, (cpu.PC >> 8) & 0x00FF);
     cpu.SP--;
     cpu_write(0x0100 + cpu.SP, cpu.PC & 0x00FF);

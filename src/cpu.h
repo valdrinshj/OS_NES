@@ -31,7 +31,9 @@ typedef enum {
     N = (1 << 7),   // bit 7: Negative
 } CpuStatusFlag;
 
+void cpu_init();
 void cpu_connect_bus(Bus *bus);
+Cpu *cpu_get();
 void cpu_write(uint16_t addr, uint8_t data);
 uint8_t cpu_read(uint16_t addr);
 void cpu_clock();
@@ -40,10 +42,7 @@ void cpu_interrupt_request();
 void cpu_non_mask_interrupt();
 uint8_t cpu_fetch();
 
-
 void cpu_exec();
-void cpu_init(void);
-
 //Addressing modes
 uint8_t IMP();
 uint8_t ZP0();

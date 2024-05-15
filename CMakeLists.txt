@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.27)
-project(Project)
+project(nes)
 
 set(CMAKE_C_STANDARD 11)
 
 cmake_minimum_required(VERSION 3.11) # FetchContent is available in 3.11+
-project(example)
+project(nes_exec)
 
 # Generate compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
