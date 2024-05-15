@@ -6,18 +6,26 @@
 #include <stddef.h>
 #include "mapper000.h"
 
+
 typedef struct {
     uint8_t *items;
     size_t size;
     size_t capacity;
 } Vector; // just like a dynamic array
 
+typedef enum {
+    HORIZONTAL = 0,
+    VERTICAL
+} Mirror;
+
 typedef struct {
+    bool bImageValid;
     Vector *PRGMemory;
     Vector *CHRMemory;
     uint8_t nMapperID;
     uint8_t nPRGBanks; //sections of ROM --> different section's of the game code and data are divided into banks
     uint8_t nCHRBanks; // the same for CHRBanks, but here graphics data is divided
+    Mirror mirror;
     Mapper000 *mapper000;
 
 }Cartridge;

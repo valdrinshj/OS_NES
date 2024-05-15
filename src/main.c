@@ -9,6 +9,6 @@ int main() {
     cpu_init();
     cpu_connect_bus(&bus);
     StartDemo();
-    // Cartridge * cart = CartridgeCreate("cpu_dummy_reads.nes");
+    Cartridge * cart = CartridgeCreate("cpu_dummy_reads.nes");
 
 }
