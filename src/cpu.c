@@ -1,5 +1,11 @@
 #include "cpu.h"
 
+#include <stdlib.h>
+#include <string.h>
+
+
+#define HEX_CHARS "0123456789ABCDEF"
+
 //Initialize Cpu
 static Cpu cpu = {0};
 
@@ -71,7 +77,150 @@ void cpu_set_flag(CpuStatusFlag flag, bool one) {
 uint8_t cpu_get_flag(CpuStatusFlag flag) {
     return ((cpu.status & flag) > 0) ? 1 : 0;
 }
+static char* hex(uint32_t n, uint8_t d, char *dst) {
+    strset(dst, 0);
+    int i;
+    dst[d] = 0;
+    for (i = d - 1; i >= 0; i--, n >>= 4) {
+        dst[i] = HEX_CHARS[n & 0xF];
+    }
+    return dst;
+}
 
+bool CpuComplete() {
+    return cpu.cycles == 0;
+}
+void cpu_disassemble(uint16_t nStart, uint16_t nStop, char* mapLines [0xFFFF]) {
+
+    uint32_t addr = nStart;
+	uint8_t value = 0x00, lo = 0x00, hi = 0x00;
+	uint16_t line_addr;
+    char *sInst = (char*)calloc(1024, 1);
+    char hex_aux[16];
+
+	while (addr <= (uint32_t)nStop) {
+        strset(sInst, 0);
+		line_addr = addr;
+
+		// Prefix line with instruction address
+
+        strcat(sInst, "$");
+        strcat(sInst, hex(addr, 4, hex_aux));
+        strcat(sInst, ": ");
+
+		// Read instruction, and get its readable name
+		uint8_t opcode = cpu_read(addr);
+        addr++;
+		strcat(sInst, LOOKUP[opcode].name);
+        strcat(sInst, " ");
+
+		// Get oprands from desired locations, and form the
+		// instruction based upon its addressing mode. These
+		// routines mimmick the actual fetch routine of the
+		// 6502 in order to get accurate data as part of the
+		// instruction
+
+		if (LOOKUP[opcode].addrmode == IMP)
+		{
+            strcat(sInst, " {IMP}");
+		}
+		else if (LOOKUP[opcode].addrmode == IMM)
+		{
+			value = cpu_read(addr); addr++;
+            strcat(sInst, "#$");
+            strcat(sInst, hex(value, 2, hex_aux));
+            strcat(sInst, " {IMM}");
+		}
+		else if (LOOKUP[opcode].addrmode == ZP0)
+		{
+			lo = cpu_read(addr); addr++;
+			hi = 0x00;
+            strcat(sInst, "$");
+            strcat(sInst, hex(lo, 2, hex_aux));
+            strcat(sInst, " {ZP0}");
+		}
+		else if (LOOKUP[opcode].addrmode == ZPX)
+		{
+			lo = cpu_read(addr); addr++;
+			hi = 0x00;
+            strcat(sInst, "$");
+            strcat(sInst, hex(lo, 2, hex_aux));
+            strcat(sInst, ", X {ZPX}");
+		}
+		else if (LOOKUP[opcode].addrmode == ZPY)
+		{
+			lo = cpu_read(addr); addr++;
+			hi = 0x00;
+            strcat(sInst, "$");
+            strcat(sInst, hex(lo, 2, hex_aux));
+            strcat(sInst, ", Y {ZPY}");
+		}
+		else if (LOOKUP[opcode].addrmode == IZX)
+		{
+			lo = cpu_read(addr); addr++;
+			hi = 0x00;
+            strcat(sInst, "($");
+            strcat(sInst, hex(lo, 2, hex_aux));
+            strcat(sInst, ", X) {IZX}");
+		}
+		else if (LOOKUP[opcode].addrmode == IZY)
+		{
+			lo = cpu_read(addr); addr++;
+			hi = 0x00;
+            strcat(sInst, "($");
+            strcat(sInst, hex(lo, 2, hex_aux));
+            strcat(sInst, "), Y {IZY}");
+		}
+		else if (LOOKUP[opcode].addrmode == ABS)
+		{
+			lo = cpu_read(addr); addr++;
+			hi = cpu_read(addr); addr++;
+            strcat(sInst, "$");
+            strcat(sInst, hex((uint16_t)(hi << 8) | lo, 4, hex_aux));
+            strcat(sInst, " {ABS}");
+		}
+		else if (LOOKUP[opcode].addrmode == ABX)
+		{
+			lo = cpu_read(addr); addr++;
+			hi = cpu_read(addr); addr++;
+            strcat(sInst, "$");
+            strcat(sInst, hex((uint16_t)(hi << 8) | lo, 4, hex_aux));
+            strcat(sInst, ", X {ABX}");
+		}
+		else if (LOOKUP[opcode].addrmode == ABY)
+		{
+			lo = cpu_read(addr); addr++;
+			hi = cpu_read(addr); addr++;
+            strcat(sInst, "$");
+            strcat(sInst, hex((uint16_t)(hi << 8) | lo, 4, hex_aux));
+            strcat(sInst, ", Y {ABY}");
+		}
+		else if (LOOKUP[opcode].addrmode == IND)
+		{
+			lo = cpu_read(addr); addr++;
+			hi = cpu_read(addr); addr++;
+            strcat(sInst, "($");
+            strcat(sInst, hex((uint16_t)(hi << 8) | lo, 4, hex_aux));
+            strcat(sInst, ") {IND}");
+		}
+		else if (LOOKUP[opcode].addrmode == REL)
+		{
+			value = cpu_read(addr); addr++;
+            strcat(sInst, "$");
+            strcat(sInst, hex(value, 2, hex_aux));
+            strcat(sInst, " [$");
+            strcat(sInst, hex(addr + (int8_t)value, 4, hex_aux));
+            strcat(sInst, "] {REL}");
+		}
+
+		// Add the formed string to a std::map, using the instruction's
+		// address as the key. This makes it convenient to look for later
+		// as the instructions are variable in length, so a straight up
+		// incremental index is not sufficient.
+		mapLines[line_addr] = strdup(sInst);
+    }
+
+}
 void cpu_clock() {
     if (cpu.cycles ==  0) {
         cpu.opcode = cpu_read(cpu.PC);

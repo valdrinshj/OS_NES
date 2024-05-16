@@ -9,7 +9,7 @@
 
 typedef struct{
     // Cpu cpu;
-    Ppu ppu;
+    Ppu *ppu;
     uint8_t cpuRam[2048];
     Cartridge *cartridge;
 

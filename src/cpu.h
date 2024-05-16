@@ -41,7 +41,8 @@ void cpu_reset();
 void cpu_interrupt_request();
 void cpu_non_mask_interrupt();
 uint8_t cpu_fetch();
-
+bool CpuComplete();
+void cpu_disassemble(uint16_t nStart, uint16_t nStop, char* mapLines [0xFFFF]);
 void cpu_exec();
 //Addressing modes
 uint8_t IMP();

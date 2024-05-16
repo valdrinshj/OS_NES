@@ -1,5 +1,9 @@
 #include "bus.h"
+
+#include "cpu.h"
 #include "ppu.h"
+
+static uint32_t nSystemClockCounter = 0;
 
 void busWrite(Bus *bus, uint16_t addr, uint8_t data) {
     if(addr >= 0x0000 && addr <= 0x1FFF) {
@@ -22,10 +26,18 @@ void NesInsertCartridge(Bus *bus, Cartridge *cartridge) {
     bus->cartridge = cartridge;
     PpuConnectCartridge(cartridge);
 }
-//void NesReset(Bus *bus) {
-    //cpu_reset();
-    // nSystemClockCounter = 0;
-//}
+void NesReset(Bus *bus) {
+    cpu_reset();
+    nSystemClockCounter = 0;
+}
 void NesClock(Bus *bus) {
-
+    PpuClock();
+    if(nSystemClockCounter % 3 == 0) {
+        cpu_clock();
+    }
+    if(bus->ppu->nmi) {
+        bus->ppu->nmi = false;
+        cpu_non_mask_interrupt();
+    }
+    nSystemClockCounter++;
 }

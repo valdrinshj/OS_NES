@@ -1,0 +1,7 @@
+*.exe
+*.png
+*.out
+*.cmake
+*.log
+*.nes
+node_modules/

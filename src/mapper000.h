@@ -14,6 +14,10 @@ typedef struct Mapper{
 
 } Mapper000;
 
+Mapper000 *MapperCreate(uint8_t PRGbanks, uint8_t CHRbanks);
+
+Mapper000 *MapperROM(Mapper000 *mapper);
+
 #endif // MAPPER_H
 
 

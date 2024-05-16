@@ -6,9 +6,9 @@
 static Bus bus = {0};
 
 int main() {
+    bus.ppu = ppu_get();
     cpu_init();
+    ppuInit();
     cpu_connect_bus(&bus);
     StartDemo();
-    Cartridge * cart = CartridgeCreate("cpu_dummy_reads.nes");
-
 }
