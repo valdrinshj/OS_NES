@@ -78,7 +78,7 @@ uint8_t cpu_get_flag(CpuStatusFlag flag) {
     return ((cpu.status & flag) > 0) ? 1 : 0;
 }
 static char* hex(uint32_t n, uint8_t d, char *dst) {
-    strset(dst, 0);
+    memset(dst, 0, d);
     int i;
     dst[d] = 0;
     for (i = d - 1; i >= 0; i--, n >>= 4) {
@@ -99,7 +99,7 @@ void cpu_disassemble(uint16_t nStart, uint16_t nStop, char* mapLines [0xFFFF]) {
     char hex_aux[16];
 
 	while (addr <= (uint32_t)nStop) {
-        strset(sInst, 0);
+        memset(sInst, 0, 1024);
 		line_addr = addr;
 
 		// Prefix line with instruction address

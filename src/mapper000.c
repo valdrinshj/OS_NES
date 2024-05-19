@@ -8,7 +8,7 @@ bool cpuMapWrite(Mapper000 *mapper, uint16_t addr, uint32_t *mappedAddr);
 bool ppuMapRead(Mapper000 *mapper, uint16_t addr, uint32_t *mappedAddr);
 bool ppuMapWrite(Mapper000 *mapper, uint16_t addr, uint32_t *mappedAddr);
 
-Mapper000 *MapperROM(Mapper000 *mapper) {
+void MapperROM(Mapper000 *mapper) {
     mapper->cpuMapRead = cpuMapRead;
     mapper->cpuMapWrite = cpuMapWrite;
     mapper->ppuMapRead = ppuMapRead;

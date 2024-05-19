@@ -34,11 +34,11 @@ Cartridge *CartridgeCreate(const char *fileName);
 
 
 //Communication with main bus
-bool cartridgeCpuRead(uint16_t addr, uint8_t *data);
-bool cartridgeCpuWrite(uint16_t addr, uint8_t data);
+bool cartridgeCpuRead(Cartridge *cartridge,uint16_t addr, uint8_t *data);
+bool cartridgeCpuWrite(Cartridge *cartridge,uint16_t addr, uint8_t data);
 //Communication with Ppu bus
-bool cartridgePpuRead(uint16_t addr, uint8_t *data);
-bool cartridgePpuWrite(uint16_t addr, uint8_t data);
+bool cartridgePpuRead(Cartridge *cartridge,uint16_t addr, uint8_t *data);
+bool cartridgePpuWrite(Cartridge *cartridge,uint16_t addr, uint8_t data);
 
 
 #endif //PROJECT_CARTRIDGE_H
