@@ -1,6 +1,6 @@
-#ifndef PROJECT_DEMO_H
-#define PROJECT_DEMO_H
+#ifndef DEMO_H
+#define DEMO_H
 
 void StartDemo();
 
-#endif //PROJECT_DEMO_H
+#endif  // DEMO_H

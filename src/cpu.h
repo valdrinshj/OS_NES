@@ -1,65 +1,74 @@
-#ifndef IMP_6502_CPU
-#define IMP_6502_CPU
+#ifndef CPU_H
+#define CPU_H
 
-#include <stdint.h>
 #include "bus.h"
 
 typedef struct {
     Bus *bus;
-    uint16_t PC; //program counter: next program bite stored
-    uint8_t SP; //stack pointer: points to empty stack mostly
-    uint8_t A; // accumulator: holds the results of arithmetic and logical operations
-    uint8_t X; // index register x: Often used for indexing arrays and accessing data structures in memory.
-    uint8_t Y; // index register y: Typically used as a loop counter or for pointer manipulation.
-    uint8_t status; // status register
-    uint8_t cycles;
+    uint8_t A;
+    uint8_t X;
+    uint8_t Y;
+    uint16_t PC;
+    uint8_t SP;
+    uint8_t status;
     uint8_t fetched;
+    uint16_t temp;
     uint16_t addr_abs;
     uint16_t addr_rel;
-    uint16_t temp;
     uint8_t opcode;
-} Cpu;
+    uint8_t cycles;
+} Cpu6502;
 
 typedef enum {
-    C = (1 << 0),   // bit 0: Carry
-    Z = (1 << 1),   // bit 1: Zero
-    I = (1 << 2),   // bit 2: Interrupt Disable
-    D = (1 << 3),   // bit 3: Decimal (will not be used)
-    B = (1 << 4),   // bit 4: Break
-    U = (1 << 5),   // bit 5: Unused
-    V = (1 << 6),   // bit 6: Overflow
-    N = (1 << 7),   // bit 7: Negative
+    C = (1 << 0),   // Carry
+    Z = (1 << 1),   // Zero
+    I = (1 << 2),   // Interrupt Disable
+    D = (1 << 3),   // Decimal (will not be used)
+    B = (1 << 4),   // Break
+    U = (1 << 5),   // Unused
+    V = (1 << 6),   // Overflow
+    N = (1 << 7),   // Negative
 } CpuStatusFlag;
 
-void cpu_init();
-void cpu_connect_bus(Bus *bus);
-Cpu *cpu_get();
-void cpu_write(uint16_t addr, uint8_t data);
-uint8_t cpu_read(uint16_t addr);
-void cpu_clock();
-void cpu_reset();
-void cpu_interrupt_request();
-void cpu_non_mask_interrupt();
-uint8_t cpu_fetch();
+void CpuInit();
+
+void CpuConnectBus(Bus *bus);
+uint8_t CpuRead(uint16_t addr);
+void CpuWrite(uint16_t addr, uint8_t data);
+void CpuClock();
+uint8_t CpuFetch();
+void CpuReset();
+void CpuIrq();  // Interrupt request signal
+void CpuNmi();  // Non maskable interrupt signal
 bool CpuComplete();
-void cpu_disassemble(uint16_t nStart, uint16_t nStop, char* mapLines [0xFFFF]);
-void cpu_exec();
-//Addressing modes
-uint8_t IMP();
-uint8_t ZP0();
+void CpuDisassemble(uint16_t nStart, uint16_t nStop, char* linesAsm [0xFFFF]);
+Cpu6502 *CpuGet();
+
+//----------------------------------------------------------------------------------
+// Addressing modes
+//----------------------------------------------------------------------------------
+
+// Indexed addressing
+uint8_t ZPX();
 uint8_t ZPY();
-uint8_t ABS();
+uint8_t ABX();
 uint8_t ABY();
 uint8_t IZX();
-
-uint8_t IMM();
-uint8_t ZPX();
-uint8_t REL();
-uint8_t ABX();
-uint8_t IND();
 uint8_t IZY();
 
-//Opcodes
+// Other addressing modes
+uint8_t IMP();
+uint8_t ACC();
+uint8_t IMM();
+uint8_t ZP0();
+uint8_t ABS();
+uint8_t REL();
+uint8_t IND();
+
+//----------------------------------------------------------------------------------
+// Op codes
+//----------------------------------------------------------------------------------
+
 uint8_t ADC();
 uint8_t AND();
 uint8_t ASL();
@@ -80,6 +89,7 @@ uint8_t CLV();
 uint8_t CMP();
 uint8_t CPX();
 uint8_t CPY();
+
 uint8_t DEC();
 uint8_t DEX();
 uint8_t DEY();
@@ -99,6 +109,7 @@ uint8_t PHA();
 uint8_t PHP();
 uint8_t PLA();
 uint8_t PLP();
+
 uint8_t ROL();
 uint8_t ROR();
 uint8_t RTI();
@@ -117,7 +128,6 @@ uint8_t TXA();
 uint8_t TXS();
 uint8_t TYA();
 
-//illegal Opcode
 uint8_t XXX();
 
-#endif //IMP_6502_CPU
+#endif  // CPU_H

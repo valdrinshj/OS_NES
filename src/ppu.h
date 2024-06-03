@@ -1,28 +1,44 @@
-#ifndef INC_6502_MEM_H
-#define INC_6502_MEM_H
+#ifndef PPU_H
+#define PPU_H
 
-#include <stdint.h>
-#include <stdbool.h>
-#include "raylib.h"
+
 #include "cartridge.h"
+#include <raylib.h>
+#include <stdint.h>
 
 typedef struct {
-    Color *pixel;
+    Color *pixels;
     uint16_t width;
     uint16_t height;
 } Sprite;
 
+Sprite *SpriteCreate(uint16_t width, uint16_t height);
+Color SpriteGetPixel(Sprite *sprite, uint16_t x, uint16_t y);
+bool SpriteSetPixel(Sprite *sprite, uint16_t x, uint16_t y, Color color);
 
+typedef union {
+    struct {
+        uint8_t nametableX : 1;
+        uint8_t nametableY : 1;
+        uint8_t incrementMode : 1;
+        uint8_t patternSprite : 1;
+        uint8_t patternBackground : 1;
+        uint8_t spriteSize : 1;
+        uint8_t slaveMode : 1;   // unused
+        uint8_t enableNmi : 1;
+    } bits;
+    uint8_t reg;
+} PpuCtrl;
 
 typedef union {
     struct {
         uint8_t unused : 5;
-        uint8_t sprite_overflow : 1;
-        uint8_t sprite_zero_hit : 1;
-        uint8_t vertical_blank : 1;
+        uint8_t spriteOverflow : 1;
+        uint8_t spriteZeroHit : 1;
+        uint8_t verticalBlank : 1;
     } bits;
     uint8_t reg;
-}PpuStatus;
+} PpuStatus;
 
 typedef union {
     struct {
@@ -38,64 +54,67 @@ typedef union {
     uint8_t reg;
 } PpuMask;
 
-typedef union {
-    struct {
-        uint8_t nametable_x : 1;
-        uint8_t nametable_y : 1;
-        uint8_t increment_mode : 1;
-        uint8_t pattern_sprite : 1;
-        uint8_t pattern_background : 1;
-        uint8_t sprite_size : 1;
-        uint8_t slave_mode : 1; // damn, is unused
-        uint8_t enable_nmi : 1;
-    } bits;
-    uint8_t reg;
-}PpuControl;
-
 typedef struct {
-    PpuControl control;
+    PpuCtrl ctrl;
     PpuStatus status;
     PpuMask mask;
 } PpuRegisters;
 
+typedef union {
+    struct {
+        uint16_t coarseX : 5;
+        uint16_t coarseY : 5;
+        uint16_t nametableX : 1;
+        uint16_t nametableY : 1;
+        uint16_t fineY : 3;
+        uint16_t unused : 1;
+    } bits;
+    uint16_t reg;
+} LoopyRegister;
+
 typedef struct {
     Cartridge *cartridge;
-    uint8_t nameTable[2][1024];  // Vram that holds nametable information, 2 * 1 Kb nametables
-    uint8_t paletteTable[32]; //Palette information for colors
-    uint8_t patternTable[2][4096]; // 2 * 4 KB arrays that represent pattern memory, now unnecessary will only be used if we implement our own mapper
+    uint8_t nameTable[2][1024];
+    uint8_t paletteTable[32];
+    uint8_t patternTable[2][4096];   // This table wont be used in the real emulation. Just keep it here for the moment for the design.
     Color paletteScreen[64];
-    Sprite *sprScreen;
-    Sprite *sprNameTable[2];
-    Sprite *sprPatternTable[2];
-    int16_t scanline; // variable to track scanline
-    int16_t cycle; // variable to track cycle
-    bool frame_complete; // variable to track frame completion
+    Sprite *spriteScreen;
+    Sprite *spriteNameTable[2];
+    Sprite *spritePatternTable[2];
+    int16_t scanline;
+    int16_t cycle;
+    bool frameCompleted;
     PpuRegisters registers;
+    LoopyRegister vramAddr;
+    LoopyRegister tramAddr;
     uint8_t addressLatch;
     uint8_t ppuDataBuffer;
-    uint16_t ppu_address;
+    uint8_t fineX;
+    uint8_t bgNextTileId;
+    uint8_t bgNextTileAttr;
+    uint8_t bgNextTileLsb;
+    uint8_t bgNextTileMsb;
+    uint16_t bgShifterPatternLo;
+    uint16_t bgShifterPatternHi;
+    uint16_t bgShifterAttribLo;
+    uint16_t bgShifterAttribHi;
     bool nmi;
-}Ppu;
-void ppuInit();
+} Ppu2C02;
 
-Sprite *spriteCreate(uint16_t width, uint16_t height);
-bool spriteSetPixel(Sprite *sprite, uint16_t x, uint16_t y, Color color);
+void PpuInit();
 
-Ppu *ppu_get();
-Color spriteGetPixel(Sprite *sprite,uint16_t x, uint16_t y);
-Sprite *getPatternTable(uint8_t i, uint8_t palette);
-Color getColourFromPaletteRam(uint8_t palette, uint8_t pixel);
-//Communication with main bus
-uint8_t cpuReadFromPpu(uint16_t addr, bool bReadOnly);
-void cpuWriteToPpu(uint16_t addr, uint8_t data);
+uint8_t CpuReadFromPpu(uint16_t addr, bool readOnly);
+void CpuWriteToPpu(uint16_t addr, uint8_t data);
 
-//Communication with ppu bus
-uint8_t ppuRead(uint16_t addr);
-void ppuWrite(uint16_t addr, uint8_t data);
+uint8_t PpuRead(uint16_t addr);
+void PpuWrite(uint16_t addr, uint8_t data);
 
-// Connect Cartridge to PPU and a clock function
+Ppu2C02 *PpuGet();
+
 void PpuConnectCartridge(Cartridge *cartridge);
 void PpuClock();
 
+Color GetColourFromPaletteRam(uint8_t palette, uint8_t pixel);
+Sprite *GetPatternTable(uint8_t i, uint8_t palette);
 
-#endif
+#endif  // PPU_H

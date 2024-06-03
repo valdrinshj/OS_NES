@@ -1,17 +1,15 @@
-#include "bus.h"
 #include "ppu.h"
-
 #include <stdlib.h>
-
-#include "raylib.h"
+#include <stdio.h>
+#include <string.h>
 
 Color ColorBuild(uint8_t r, uint8_t g, uint8_t b) {
     return (Color){r,g,b,255};
 }
-static Ppu ppu = {0};
 
-void ppuInit() {
-    // Array of all the available colors the nes is capable of doing
+static Ppu2C02 ppu = {0};
+
+void PpuInit() {
     ppu.paletteScreen[0x00] = ColorBuild(84, 84, 84);
     ppu.paletteScreen[0x01] = ColorBuild(0, 30, 116);
     ppu.paletteScreen[0x02] = ColorBuild(8, 16, 144);
@@ -80,175 +78,250 @@ void ppuInit() {
     ppu.paletteScreen[0x3E] = ColorBuild(0, 0, 0);
     ppu.paletteScreen[0x3F] = ColorBuild(0, 0, 0);
 
-    ppu.sprScreen = spriteCreate(256,240);
-    ppu.sprNameTable[0] = spriteCreate(256,240);
-    ppu.sprNameTable[1] = spriteCreate(256,240);
-    // will be used to visualize the pattern memory
-    ppu.sprPatternTable[0] = spriteCreate(128, 128);
-    ppu.sprPatternTable[1] = spriteCreate(128, 128);
+    ppu.spriteScreen = SpriteCreate(256, 240);
+    ppu.spriteNameTable[0] = SpriteCreate(256, 240);
+    ppu.spriteNameTable[1] = SpriteCreate(256, 240);
+    ppu.spritePatternTable[0] = SpriteCreate(128, 128);
+    ppu.spritePatternTable[1] = SpriteCreate(128, 128);
+    ppu.scanline = 0;
+    ppu.cycle = 0;
+    ppu.frameCompleted = false;
+
+    ppu.registers.ctrl = (PpuCtrl){0};
+    ppu.registers.status = (PpuStatus){0};
+    ppu.registers.mask = (PpuMask){0};
+
+    ppu.addressLatch = 0x00;
+    ppu.ppuDataBuffer = 0x00;
+    ppu.vramAddr = (LoopyRegister){0};
+    ppu.vramAddr.reg = 0x0000;
+    ppu.tramAddr = (LoopyRegister){0};
+    ppu.tramAddr.reg = 0x0000;
+    ppu.fineX = 0x00;
+
+    ppu.bgNextTileId = 0x00;
+    ppu.bgNextTileAttr = 0x00;
+    ppu.bgNextTileLsb = 0x00;
+    ppu.bgNextTileMsb = 0x00;
+
+    ppu.bgShifterPatternLo = 0x0000;
+    ppu.bgShifterPatternHi = 0x0000;
+    ppu.bgShifterAttribLo = 0x0000;
+    ppu.bgShifterAttribHi = 0x0000;
+
+    ppu.nmi = false;
 }
-// functtion to create a new Sprite
-Sprite *spriteCreate(uint16_t width, uint16_t height) {
+
+Sprite *SpriteCreate(uint16_t width, uint16_t height) {
     Sprite *sprite = (Sprite*)malloc(sizeof(sprite));
-    if(sprite == NULL) {
-        free(sprite);
-        return NULL;
-    }
     sprite->width = width;
     sprite->height = height;
-    sprite->pixel = (Color*)malloc(width * height * sizeof(Color));
-    if(sprite->pixel == NULL) {
-        free(sprite);
-        return NULL;
+    sprite->pixels = (Color*)malloc(width*height*sizeof(Color));
+    for (int j = 0; j < height; j++) {
+        for (int i = 0; i < width; i++) {
+            SpriteSetPixel(sprite, i, j, BLACK);
+        }
     }
     return sprite;
 }
-Ppu *ppu_get() {
-    return &ppu;
+
+Color SpriteGetPixel(Sprite *sprite, uint16_t x, uint16_t y) {
+    return sprite->pixels[x*sprite->height + y];
 }
-Color spriteGetPixel(Sprite *sprite,uint16_t x, uint16_t y) {
-        return sprite->pixel[x*sprite->height + y];
-}
-// Function to set a pixel in the Sprite
-bool spriteSetPixel(Sprite *sprite, uint16_t x, uint16_t y, Color color) {
-    //Check if the coordinates are within the bounds
-    if(x >= 0 && x < sprite->width && y >= 0 && y < sprite->height) {
-        //set the color of the pixel
-        sprite->pixel[x*sprite->height + y] = color;
+
+bool SpriteSetPixel(Sprite *sprite, uint16_t x, uint16_t y, Color color) {
+    if (x >= 0 && x < sprite->width && y >= 0 && y < sprite->height) {
+        sprite->pixels[x*sprite->height + y] = color;
         return true;
     }
     return false;
 }
 
-Sprite *getPatternTable(uint8_t i, uint8_t palette) {
-    // because patternTable consists of 16x16 Tiles
-    for(uint16_t nTileY = 0; nTileY < 16; nTileY++) {
-        for(uint16_t nTileX = 0; nTileX < 16; nTileX++) {
-            // heigth and width of tile
-            uint16_t nOffset = nTileY * 256 + nTileX * 16;
-            // 8 rows and columns with each 8 pixels
-            for (uint16_t row = 0; row < 8; row++) {
-                    uint8_t tile_lsb = ppuRead(i * 0x1000 + nOffset + row + 0);
-                    uint8_t tile_msb = ppuRead(i * 0x1000 + nOffset + row + 8);
-
-                for(uint16_t col = 0; col < 8; col++) {
-                    // value between 0 and 3
-                    uint8_t pixel = (tile_lsb & 0x01) + (tile_msb & 0x01);
-                    tile_lsb >>= 1; tile_msb >>=1;
-                    Color c = getColourFromPaletteRam(palette, pixel);
-                    spriteSetPixel(ppu.sprPatternTable[i], nTileX * 8 + (7 - col), nTileY * 8 + row, c);
-                }
-            }
+uint8_t CpuReadFromPpu(uint16_t addr, bool readOnly) {
+    uint8_t data = 0x00;
+    addr &= 0x0007; // PPU is mirrored to the first 8 addresess
+    if (readOnly) {
+        switch (addr) {
+            case 0x0000: // Control
+                data = ppu.registers.ctrl.reg;
+                break;
+            case 0x0001: // Mask
+                data = ppu.registers.mask.reg;
+                break;
+            case 0x0002: // Status
+                data = ppu.registers.status.reg;
+                break;
+            case 0x0003: // OAM Address
+                break;
+            case 0x0004: // OAM Data
+                break;
+            case 0x0005: // Scroll
+                break;
+            case 0x0006: // PPU Address
+                break;
+            case 0x0007: // PPU Data
+                break;
         }
     }
-    return ppu.sprPatternTable[i];
-}
-Color getColourFromPaletteRam(uint8_t palette, uint8_t pixel) {
-    return ppu.paletteScreen[ppuRead(0x3F00 + (palette << 2) + pixel) & 0x3F];
-}
+    else {
+        switch (addr) {
 
+            // Control - Not readable
+            case 0x0000: break;
 
-uint8_t cpuReadFromPpu(uint16_t addr, bool bReadOnly) {
-    uint8_t data = 0x00;
+                // Mask - Not Readable
+            case 0x0001: break;
 
-    switch (addr) {
-        case 0x0000: // Control
-            break;
-        case 0x0001: // Mask
-            break;
-        case 0x0002: // Status
-            data = (ppu.registers.status.reg & 0xE0  | (ppu.ppuDataBuffer & 0x1F));
-            ppu.registers.status.bits.vertical_blank = 0;
-            ppu.addressLatch = 0;
-            break;
-        case 0x0003: // OAM Address
-            break;
-        case 0x0004: // OAM Data
-            break;
-        case 0x0005: // Scroll
-            break;
-        case 0x0006: // PPU Address cant read
-            break;
-        case 0x0007: // PPU Data
-            data = ppu.ppuDataBuffer;
-            ppu.ppuDataBuffer = ppuRead(ppu.ppu_address);
-            // not wait until next clock cycle
-            if(ppu.ppu_address > 0x3f00) {
+                // Status
+            case 0x0002:
+                data = (ppu.registers.status.reg & 0xE0) | (ppu.ppuDataBuffer & 0x1F);
+                ppu.registers.status.bits.verticalBlank = 0;
+                ppu.addressLatch = 0;
+                break;
+
+                // OAM Address
+            case 0x0003: break;
+
+                // OAM Data
+            case 0x0004: break;
+
+                // Scroll - Not Readable
+            case 0x0005: break;
+
+                // PPU Address - Not Readable
+            case 0x0006: break;
+
+                // PPU Data
+            case 0x0007:
                 data = ppu.ppuDataBuffer;
-            }
-            ppu.ppu_address++;
-            break;
+                ppu.ppuDataBuffer = PpuRead(ppu.vramAddr.reg);
+                if (ppu.vramAddr.reg >= 0x3F00) data = ppu.ppuDataBuffer;
+                ppu.vramAddr.reg += ppu.registers.ctrl.bits.incrementMode ? 32 : 1;
+                break;
+        }
     }
-
     return data;
 }
-void cpuWriteToPpu(uint16_t addr, uint8_t data) {
-    switch (addr)
-    {
+
+void CpuWriteToPpu(uint16_t addr, uint8_t data) {
+    addr &= 0x0007; // PPU is mirrored to the first 8 addresess
+    switch (addr) {
         case 0x0000: // Control
-            ppu.registers.control.reg = data;
+            ppu.registers.ctrl.reg = data;
+            ppu.tramAddr.bits.nametableX = ppu.registers.ctrl.bits.nametableX;
+            ppu.tramAddr.bits.nametableY = ppu.registers.ctrl.bits.nametableY;
             break;
         case 0x0001: // Mask
             ppu.registers.mask.reg = data;
             break;
-        case 0x0002: // Status -> cant write
+        case 0x0002: // Status
             break;
         case 0x0003: // OAM Address
             break;
         case 0x0004: // OAM Data
             break;
         case 0x0005: // Scroll
+            if (ppu.addressLatch == 0) {
+                ppu.fineX = data & 0x07;
+                ppu.tramAddr.bits.coarseX = data >> 3;
+                ppu.addressLatch = 1;
+            }
+            else {
+                ppu.tramAddr.bits.fineY = data & 0x07;
+                ppu.tramAddr.bits.coarseY = data >> 3;
+                ppu.addressLatch = 0;
+            }
             break;
         case 0x0006: // PPU Address
-            if(ppu.addressLatch == 0) {
-                ppu.ppu_address = (ppu.ppu_address & 0xFF00) | data;
+            if (ppu.addressLatch == 0) {
+                ppu.tramAddr.reg = (uint16_t)((data & 0x3F) << 8) | (ppu.tramAddr.reg & 0x00FF);
                 ppu.addressLatch = 1;
-            } else {
-                ppu.ppu_address = (ppu.ppu_address & 0xFF00) | data;
+            }
+            else {
+                ppu.tramAddr.reg = (ppu.tramAddr.reg & 0xFF00) | data;
+                ppu.vramAddr = ppu.tramAddr;
                 ppu.addressLatch = 0;
             }
             break;
         case 0x0007: // PPU Data
-            ppuWrite(ppu.ppu_address, data);
-            ppu.ppu_address++;
+            PpuWrite(ppu.vramAddr.reg, data);
+            ppu.vramAddr.reg += ppu.registers.ctrl.bits.incrementMode ? 32 : 1;
             break;
     }
 }
 
-uint8_t ppuRead(uint16_t addr) {
+uint8_t PpuRead(uint16_t addr) {
     uint8_t data = 0x00;
-    addr &= 0x3FFF;  //placeholders
-    if(cartridgePpuRead(addr, &data)) {
+    addr &= 0x3FFF;
 
-    } else if (addr >= 0x0000 && addr <= 0x1FFF) {
-        // read from pattern memory -> examining msb and offsets by the rest of the address
+    if (CartridgePpuRead(ppu.cartridge, addr, &data)) {
+
+    }
+        // Pattern table
+    else if (addr >= 0x0000 && addr <= 0x1FFF) {
+        // Get the most significant bit of the address and offsets by the rest of the bits of the address
         data = ppu.patternTable[(addr & 0x1000) >> 12][addr & 0x0FFF];
-    } else if (addr >= 0x2000 && addr <= 0x3EFF) {
-
-    } else if (addr >= 0x3F00 && addr <= 0x3FFF) {
+    }
+        // Name table
+    else if (addr >= 0x2000 && addr <= 0x3EFF) {
+        addr &= 0x0FFF;
+        if (ppu.cartridge->mirror == VERTICAL) {
+            if (addr >= 0x0000 && addr <= 0x03FF) data = ppu.nameTable[0][addr & 0x03FF];
+            if (addr >= 0x0400 && addr <= 0x07FF) data = ppu.nameTable[1][addr & 0x03FF];
+            if (addr >= 0x0800 && addr <= 0x0BFF) data = ppu.nameTable[0][addr & 0x03FF];
+            if (addr >= 0x0C00 && addr <= 0x0FFF) data = ppu.nameTable[1][addr & 0x03FF];
+        }
+        else if (ppu.cartridge->mirror == HORIZONTAL) {
+            if (addr >= 0x0000 && addr <= 0x03FF) data = ppu.nameTable[0][addr & 0x03FF];
+            if (addr >= 0x0400 && addr <= 0x07FF) data = ppu.nameTable[0][addr & 0x03FF];
+            if (addr >= 0x0800 && addr <= 0x0BFF) data = ppu.nameTable[1][addr & 0x03FF];
+            if (addr >= 0x0C00 && addr <= 0x0FFF) data = ppu.nameTable[1][addr & 0x03FF];
+        }
+    }
+        // Palette
+    else if (addr >= 0x3F00 && addr <= 0x3FFF) {
         addr &= 0x001F; // Mask less significant 5 bits
-        // direct mirroring
         if (addr == 0x0010) addr = 0x0000;
         if (addr == 0x0014) addr = 0x0004;
         if (addr == 0x0018) addr = 0x0008;
         if (addr == 0x001C) addr = 0x000C;
-        data = ppu.paletteTable[addr]; // read directly from memory location
+        data = ppu.paletteTable[addr];
     }
+
     return data;
 }
-void ppuWrite(uint16_t addr, uint8_t data) {
+
+void PpuWrite(uint16_t addr, uint8_t data) {
     addr &= 0x3FFF;
-    if(cartridgePpuWrite(addr, data)) {
 
-    } else if (addr >= 0x0000 && addr <= 0x1FFF) {
-        // This memory acts as a ROM for the PPU
-        // in some cartridges a RAM
+    if (CartridgePpuWrite(ppu.cartridge, addr, data)) {
+
+    }
+        // Pattern table
+    else if (addr >= 0x0000 && addr <= 0x1FFF) {
+        // This memory acts as a ROM for the PPU,
+        // but for som NES ROMs, this memory is a RAM.
         ppu.patternTable[(addr & 0x1000) >> 12][addr & 0x0FFF] = data;
-    } else if (addr >= 0x2000 && addr <= 0x3EFF) {
-
-    } else if (addr >= 0x3F00 && addr <= 0x3FFF) {
+    }
+        // Name table
+    else if (addr >= 0x2000 && addr <= 0x3EFF) {
+        addr &= 0x0FFF;
+        if (ppu.cartridge->mirror == VERTICAL) {
+            if (addr >= 0x0000 && addr <= 0x03FF) ppu.nameTable[0][addr & 0x03FF] = data;
+            if (addr >= 0x0400 && addr <= 0x07FF) ppu.nameTable[1][addr & 0x03FF] = data;
+            if (addr >= 0x0800 && addr <= 0x0BFF) ppu.nameTable[0][addr & 0x03FF] = data;
+            if (addr >= 0x0C00 && addr <= 0x0FFF) ppu.nameTable[1][addr & 0x03FF] = data;
+        }
+        else if (ppu.cartridge->mirror == HORIZONTAL) {
+            if (addr >= 0x0000 && addr <= 0x03FF) ppu.nameTable[0][addr & 0x03FF] = data;
+            if (addr >= 0x0400 && addr <= 0x07FF) ppu.nameTable[0][addr & 0x03FF] = data;
+            if (addr >= 0x0800 && addr <= 0x0BFF) ppu.nameTable[1][addr & 0x03FF] = data;
+            if (addr >= 0x0C00 && addr <= 0x0FFF) ppu.nameTable[1][addr & 0x03FF] = data;
+        }
+    }
+        // Palette
+    else if (addr >= 0x3F00 && addr <= 0x3FFF) {
         addr &= 0x001F; // Mask less significant 5 bits
-        // direct mirroring
         if (addr == 0x0010) addr = 0x0000;
         if (addr == 0x0014) addr = 0x0004;
         if (addr == 0x0018) addr = 0x0008;
@@ -256,32 +329,197 @@ void ppuWrite(uint16_t addr, uint8_t data) {
         ppu.paletteTable[addr] = data;
     }
 }
+
+Ppu2C02 *PpuGet() {
+    return &ppu;
+}
+
 void PpuConnectCartridge(Cartridge *cartridge) {
     ppu.cartridge = cartridge;
 }
-void PpuClock() {
-    if(ppu.scanline == -1 && ppu.cycle == 1) {
-        ppu.registers.status.bits.vertical_blank = 0;
+
+Color GetColourFromPaletteRam(uint8_t palette, uint8_t pixel) {
+    return ppu.paletteScreen[PpuRead(0x3F00 + (palette << 2) + pixel) & 0x3F];
+}
+
+Sprite *GetPatternTable(uint8_t i, uint8_t palette) {
+    for (uint16_t nTileY = 0; nTileY < 16; nTileY++) {
+        for (uint16_t nTileX = 0; nTileX < 16; nTileX++) {
+            uint16_t nOffset = nTileY * 256 + nTileX * 16;
+            // Now loop through 8 rows of 8 pixels (Tile)
+            for (uint16_t row = 0; row < 8; row++) {
+                uint8_t tile_lsb = PpuRead(i * 0x1000 + nOffset + row + 0x0000);
+                uint8_t tile_msb = PpuRead(i * 0x1000 + nOffset + row + 0x0008);
+                for (uint16_t col = 0; col < 8; col++) {
+                    uint8_t pixel = ((tile_lsb & 0x01) << 0) | ((tile_msb & 0x01) << 1);
+                    tile_lsb >>= 1; tile_msb >>= 1;
+                    Color c = GetColourFromPaletteRam(palette, pixel);
+                    SpriteSetPixel(ppu.spritePatternTable[i], nTileX * 8 + (7 - col), nTileY * 8 + row, c);
+                }
+            }
+        }
     }
-    if(ppu.scanline == 241 && ppu.cycle == 1) {
-        ppu.registers.status.bits.vertical_blank = 1;
-        if(ppu.registers.control.bits.enable_nmi) {
-            ppu.nmi = true;
+    return ppu.spritePatternTable[i];
+}
+
+void PpuIncrementScrollX() {
+    if (ppu.registers.mask.bits.renderBackground || ppu.registers.mask.bits.renderSprites) {
+        if (ppu.vramAddr.bits.coarseX == 31) {
+            ppu.vramAddr.bits.coarseX = 0;
+            ppu.vramAddr.bits.nametableX = ~ppu.vramAddr.bits.nametableX;
+        }
+        else {
+            ppu.vramAddr.bits.coarseX++;
+        }
+    }
+}
+
+void PpuIncrementScrollY() {
+    if (ppu.registers.mask.bits.renderBackground || ppu.registers.mask.bits.renderSprites) {
+        if (ppu.vramAddr.bits.fineY < 7) {
+            ppu.vramAddr.bits.fineY++;
+        }
+        else {
+            ppu.vramAddr.bits.fineY = 0;
+            if (ppu.vramAddr.bits.coarseY == 29) {
+                ppu.vramAddr.bits.coarseY = 0;
+                ppu.vramAddr.bits.nametableY = ~ppu.vramAddr.bits.nametableY;
+            }
+            else if (ppu.vramAddr.bits.coarseY == 31) {
+                ppu.vramAddr.bits.coarseY = 0;
+            }
+            else {
+                ppu.vramAddr.bits.coarseY++;
+            }
+        }
+    }
+}
+
+void PpuTransferAddressX() {
+    if (ppu.registers.mask.bits.renderBackground || ppu.registers.mask.bits.renderSprites) {
+        ppu.vramAddr.bits.nametableX = ppu.tramAddr.bits.nametableX;
+        ppu.vramAddr.bits.coarseX = ppu.tramAddr.bits.coarseX;
+    }
+}
+
+void PpuTransferAddressY() {
+    if (ppu.registers.mask.bits.renderBackground || ppu.registers.mask.bits.renderSprites) {
+        ppu.vramAddr.bits.fineY = ppu.tramAddr.bits.fineY;
+        ppu.vramAddr.bits.nametableY = ppu.tramAddr.bits.nametableY;
+        ppu.vramAddr.bits.coarseY = ppu.tramAddr.bits.coarseY;
+    }
+}
+
+void PpuLoadBackgroundShifters() {
+    ppu.bgShifterPatternLo = (ppu.bgShifterPatternLo & 0xFF00) | ppu.bgNextTileLsb;
+    ppu.bgShifterPatternHi = (ppu.bgShifterPatternHi & 0xFF00) | ppu.bgNextTileMsb;
+    ppu.bgShifterAttribLo = (ppu.bgShifterAttribLo & 0xFF00) | ((ppu.bgNextTileAttr & 0b01) ? 0xFF : 0x00);
+    ppu.bgShifterAttribHi = (ppu.bgShifterAttribHi & 0xFF00) | ((ppu.bgNextTileAttr & 0b10) ? 0xFF : 0x00);
+}
+
+void PpuUpdateShifters() {
+    if (ppu.registers.mask.bits.renderBackground) {
+        ppu.bgShifterPatternLo <<= 1;
+        ppu.bgShifterPatternHi <<= 1;
+        ppu.bgShifterAttribLo <<= 1;
+        ppu.bgShifterAttribHi <<= 1;
+    }
+}
+
+void PpuClock() {
+    if (ppu.scanline >= -1 && ppu.scanline < 240) {
+        if (ppu.scanline == 0 && ppu.cycle == 0) {
+            ppu.cycle = 1;
+        }
+        if (ppu.scanline == -1 && ppu.cycle == 1) {
+            ppu.registers.status.bits.verticalBlank = 0;
+        }
+        if ((ppu.cycle >= 2 && ppu.cycle < 258) || (ppu.cycle >= 321 && ppu.cycle < 338)) {
+            PpuUpdateShifters();
+            switch ((ppu.cycle - 1) % 8) {
+                case 0:
+                    PpuLoadBackgroundShifters();
+                    ppu.bgNextTileId = PpuRead(0x2000 | (ppu.vramAddr.reg & 0x0FFF));
+                    break;
+                case 2:
+                    ppu.bgNextTileAttr = PpuRead(0x23C0 | (ppu.vramAddr.bits.nametableY << 11)
+                                                 | (ppu.vramAddr.bits.nametableX << 10)
+                                                 | ((ppu.vramAddr.bits.coarseY >> 2) << 3)
+                                                 | (ppu.vramAddr.bits.coarseX >> 2));
+                    if (ppu.vramAddr.bits.coarseY & 0x02) ppu.bgNextTileAttr >>= 4;
+                    if (ppu.vramAddr.bits.coarseX & 0x02) ppu.bgNextTileAttr >>= 2;
+                    ppu.bgNextTileAttr &= 0x03;
+                    break;
+                case 4:
+                    ppu.bgNextTileLsb = PpuRead((ppu.registers.ctrl.bits.patternBackground << 12)
+                                                + ((uint16_t)ppu.bgNextTileId << 4)
+                                                + (ppu.vramAddr.bits.fineY) + 0);
+                    break;
+                case 6:
+                    ppu.bgNextTileMsb = PpuRead((ppu.registers.ctrl.bits.patternBackground << 12)
+                                                + ((uint16_t)ppu.bgNextTileId << 4)
+                                                + (ppu.vramAddr.bits.fineY) + 8);
+                    break;
+                case 7:
+                    PpuIncrementScrollX();
+                    break;
+                default:
+                    break;
+            }
+        }
+        if (ppu.cycle == 256) {
+            PpuIncrementScrollY();
+        }
+        if (ppu.cycle == 257) {
+            PpuLoadBackgroundShifters();
+            PpuTransferAddressX();
+        }
+        if (ppu.cycle == 338 || ppu.cycle == 340) {
+            ppu.bgNextTileId = PpuRead(0x2000 | (ppu.vramAddr.reg & 0x0FFF));
+        }
+        if (ppu.scanline == -1 && ppu.cycle >= 280 && ppu.cycle < 305) {
+            PpuTransferAddressY();
         }
     }
 
+    if (ppu.scanline == 240) {
+        // Nothing happen here
+    }
 
+    if (ppu.scanline >= 241 && ppu.scanline < 261) {
+        if (ppu.scanline == 241 && ppu.cycle == 1) {
+            ppu.registers.status.bits.verticalBlank = 1;
+            if (ppu.registers.ctrl.bits.enableNmi) {
+                ppu.nmi = true;
+            }
+        }
+    }
 
-    // fakes some noise for now
-    spriteSetPixel(ppu.sprScreen, ppu.cycle - 1, ppu.scanline, ppu.paletteScreen[(rand() % 2) ? 0x3F : 0x30]);
-    // renderer
+    uint8_t bgPixel = 0x00;
+    uint8_t bgPalette = 0x00;
+
+    if (ppu.registers.mask.bits.renderBackground) {
+        uint16_t bitMux = 0x8000 >> ppu.fineX;
+        uint8_t p0Pixel = (ppu.bgShifterPatternLo & bitMux) > 0;
+        uint8_t p1Pixel = (ppu.bgShifterPatternHi & bitMux) > 0;
+        bgPixel = (p1Pixel << 1) | p0Pixel;
+
+        uint8_t bgPalette0 = (ppu.bgShifterAttribLo & bitMux) > 0;
+        uint8_t bgPalette1 = (ppu.bgShifterAttribHi & bitMux) > 0;
+        bgPalette = (bgPalette1 << 1) | bgPalette0;
+    }
+
+    // Update the Sprite screen with the appropiate pixels and palettes
+    SpriteSetPixel(ppu.spriteScreen, ppu.cycle - 1, ppu.scanline, GetColourFromPaletteRam(bgPalette, bgPixel));
+
+    // Advance renderer - it never stops, it's relentless
     ppu.cycle++;
-    if(ppu.cycle >= 341) {
+    if (ppu.cycle >= 341) {
         ppu.cycle = 0;
         ppu.scanline++;
-        if(ppu.scanline >= 261) {
-            ppu.scanline--;
-            ppu.frame_complete = true;
+        if (ppu.scanline >= 261) {
+            ppu.scanline = -1;
+            ppu.frameCompleted = true;
         }
     }
 }

@@ -1,29 +1,25 @@
 #ifndef BUS_H
 #define BUS_H
 
-#include <stdint.h>
-#include <stdbool.h>
-#include "ppu.h"
+#include "memory.h"
 #include "cartridge.h"
+#include "ppu.h"
 
-
-typedef struct{
-    // Cpu cpu;
-    Ppu *ppu;
-    uint8_t cpuRam[2048];
+typedef struct {
+    Ppu2C02 *ppu;
+    Memory *memory;
     Cartridge *cartridge;
-
+    uint8_t controllerState[2];
+    uint8_t controller[2];
 } Bus;
 
-// A count of how many clocks have passed
-// uint32_t nSystemClockCounter = 0;
+void BusInit(Bus *bus);
 
-//Functions
-
-void busWrite(Bus *bus, uint16_t addr, uint8_t data);
-uint8_t busRead(Bus *bus, uint16_t addr);
+uint8_t BusRead(Bus *bus, uint16_t addr);
+void BusWrite(Bus *bus, uint16_t addr, uint8_t data);
 
 void NesInsertCartridge(Bus *bus, Cartridge *cartridge);
 void NesReset(Bus *bus);
 void NesClock(Bus *bus);
-#endif
+
+#endif  // BUS_H

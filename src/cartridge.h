@@ -1,17 +1,16 @@
-#ifndef PROJECT_CARTRIDGE_H
-#define PROJECT_CARTRIDGE_H
+#ifndef CARTRIDGE_H
+#define CARTRIDGE_H
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stddef.h>
 #include "mapper000.h"
-
+#include <assert.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 typedef struct {
     uint8_t *items;
     size_t size;
     size_t capacity;
-} Vector; // just like a dynamic array
+} Vector;
 
 typedef enum {
     HORIZONTAL = 0,
@@ -19,26 +18,21 @@ typedef enum {
 } Mirror;
 
 typedef struct {
-    bool bImageValid;
     Vector *PRGMemory;
     Vector *CHRMemory;
-    uint8_t nMapperID;
-    uint8_t nPRGBanks; //sections of ROM --> different section's of the game code and data are divided into banks
-    uint8_t nCHRBanks; // the same for CHRBanks, but here graphics data is divided
+    uint8_t mapperID;
+    uint8_t nPRGBanks;
+    uint8_t nCHRBanks;
+    Mapper *mapper;
     Mirror mirror;
-    Mapper000 *mapper000;
+} Cartridge;
 
-}Cartridge;
+Cartridge *CartridgeCreate(const char *romPath);
 
-Cartridge *CartridgeCreate(const char *fileName);
+bool CartridgeCpuRead(Cartridge *cartridge, uint16_t addr, uint8_t * data);
+bool CartridgeCpuWrite(Cartridge *cartridge, uint16_t addr, uint8_t data);
 
+bool CartridgePpuRead(Cartridge *cartridge, uint16_t addr, uint8_t * data);
+bool CartridgePpuWrite(Cartridge *cartridge, uint16_t addr, uint8_t data);
 
-//Communication with main bus
-bool cartridgeCpuRead(Cartridge *cartridge,uint16_t addr, uint8_t *data);
-bool cartridgeCpuWrite(Cartridge *cartridge,uint16_t addr, uint8_t data);
-//Communication with Ppu bus
-bool cartridgePpuRead(Cartridge *cartridge,uint16_t addr, uint8_t *data);
-bool cartridgePpuWrite(Cartridge *cartridge,uint16_t addr, uint8_t data);
-
-
-#endif //PROJECT_CARTRIDGE_H
+#endif  // CARTRIDGE_H

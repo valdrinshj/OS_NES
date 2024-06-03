@@ -41,7 +41,9 @@ add_executable(${PROJECT_NAME} src/main.c
         src/mapper000.h
         src/mapper000.c
         src/demo.h
-        src/demo.c)
+        src/demo.c
+        src/memory.h
+        src/memory.c)
 #set(raylib_VERBOSE 1)
 target_link_libraries(${PROJECT_NAME} raylib)
 

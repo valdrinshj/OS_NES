@@ -2,22 +2,21 @@
 #define MAPPER_H
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <stdbool.h>
 
 typedef struct Mapper{
-    uint8_t PRGBanks;
-    uint8_t CHRBanks;
-    bool (*cpuMapRead)(struct Mapper *this,uint16_t addr, uint32_t *mapped_addr);
-    bool (*cpuMapWrite)(struct Mapper *this,uint16_t addr,uint32_t *mapped_addr);
-    bool (*ppuMapRead)(struct Mapper *this, uint16_t addr,uint32_t *mapped_addr);
-    bool (*ppuMapWrite)(struct Mapper *this, uint16_t addr,uint32_t *mapped_addr);
+    uint8_t PRGbanks;
+    uint8_t CHRbanks;
+    bool (*MapperCpuRead)(struct Mapper *this, uint16_t addr, uint32_t* mappedAddr);
+    bool (*MapperCpuWrite)(struct Mapper *this, uint16_t addr, uint32_t* mappedAddr);
 
-} Mapper000;
+    bool (*MapperPpuRead)(struct Mapper *this, uint16_t addr, uint32_t* mappedAddr);
+    bool (*MapperPpuWrite)(struct Mapper *this, uint16_t addr, uint32_t* mappedAddr);
+} Mapper;
 
-Mapper000 *MapperCreate(uint8_t PRGbanks, uint8_t CHRbanks);
+Mapper *MapperCreate(uint8_t PRGbanks, uint8_t CHRbanks);
 
-void MapperROM(Mapper000 *mapper);
+void MapperLoadNROM(Mapper *mapper);
 
 #endif // MAPPER_H
-
-
