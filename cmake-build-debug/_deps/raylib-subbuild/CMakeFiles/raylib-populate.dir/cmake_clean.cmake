@@ -1,7 +1,6 @@
 file(REMOVE_RECURSE
   "CMakeFiles/raylib-populate"
   "CMakeFiles/raylib-populate-complete"
-  "raylib-populate-prefix/src/5.0.tar.gz"
   "raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-build"
   "raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-configure"
   "raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-download"

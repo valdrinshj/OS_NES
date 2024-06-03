@@ -5,8 +5,8 @@ cmake_minimum_required(VERSION 3.5)
 
 # Make file names absolute:
 #
-get_filename_component(filename "C:/Users/User/OS/OS_NES/cmake-build-debug/_deps/raylib-subbuild/raylib-populate-prefix/src/5.0.tar.gz" ABSOLUTE)
-get_filename_component(directory "C:/Users/User/OS/OS_NES/cmake-build-debug/_deps/raylib-src" ABSOLUTE)
+get_filename_component(filename "C:/Users/Startklar/CLionProjects/OS_NES/cmake-build-debug/_deps/raylib-subbuild/raylib-populate-prefix/src/5.0.tar.gz" ABSOLUTE)
+get_filename_component(directory "C:/Users/Startklar/CLionProjects/OS_NES/cmake-build-debug/_deps/raylib-src" ABSOLUTE)
 
 message(STATUS "extracting...
      src='${filename}'

@@ -1,1 +1,1 @@
--I"C:/Users/User/OS/OS_NES/cmake-build-debug/_deps/raylib-src/src" -isystem "C:/Users/User/OS/OS_NES/cmake-build-debug/_deps/raylib-src/src/external/glfw/include"
+-I"C:/Users/Startklar/CLionProjects/OS_NES/cmake-build-debug/_deps/raylib-src/src" -isystem "C:/Users/Startklar/CLionProjects/OS_NES/cmake-build-debug/_deps/raylib-src/src/external/glfw/include"

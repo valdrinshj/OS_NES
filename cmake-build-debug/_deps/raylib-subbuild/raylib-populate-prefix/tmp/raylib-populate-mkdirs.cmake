@@ -4,19 +4,19 @@
 cmake_minimum_required(VERSION 3.5)
 
 file(MAKE_DIRECTORY
-  "C:/Users/User/OS/OS_NES/cmake-build-debug/_deps/raylib-src"
-  "C:/Users/User/OS/OS_NES/cmake-build-debug/_deps/raylib-build"
-  "C:/Users/User/OS/OS_NES/cmake-build-debug/_deps/raylib-subbuild/raylib-populate-prefix"
-  "C:/Users/User/OS/OS_NES/cmake-build-debug/_deps/raylib-subbuild/raylib-populate-prefix/tmp"
-  "C:/Users/User/OS/OS_NES/cmake-build-debug/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp"
-  "C:/Users/User/OS/OS_NES/cmake-build-debug/_deps/raylib-subbuild/raylib-populate-prefix/src"
-  "C:/Users/User/OS/OS_NES/cmake-build-debug/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp"
+  "C:/Users/Startklar/CLionProjects/OS_NES/cmake-build-debug/_deps/raylib-src"
+  "C:/Users/Startklar/CLionProjects/OS_NES/cmake-build-debug/_deps/raylib-build"
+  "C:/Users/Startklar/CLionProjects/OS_NES/cmake-build-debug/_deps/raylib-subbuild/raylib-populate-prefix"
+  "C:/Users/Startklar/CLionProjects/OS_NES/cmake-build-debug/_deps/raylib-subbuild/raylib-populate-prefix/tmp"
+  "C:/Users/Startklar/CLionProjects/OS_NES/cmake-build-debug/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp"
+  "C:/Users/Startklar/CLionProjects/OS_NES/cmake-build-debug/_deps/raylib-subbuild/raylib-populate-prefix/src"
+  "C:/Users/Startklar/CLionProjects/OS_NES/cmake-build-debug/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp"
 )
 
 set(configSubDirs )
 foreach(subDir IN LISTS configSubDirs)
-    file(MAKE_DIRECTORY "C:/Users/User/OS/OS_NES/cmake-build-debug/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/${subDir}")
+    file(MAKE_DIRECTORY "C:/Users/Startklar/CLionProjects/OS_NES/cmake-build-debug/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/${subDir}")
 endforeach()
 if(cfgdir)
-  file(MAKE_DIRECTORY "C:/Users/User/OS/OS_NES/cmake-build-debug/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp${cfgdir}") # cfgdir has leading slash
+  file(MAKE_DIRECTORY "C:/Users/Startklar/CLionProjects/OS_NES/cmake-build-debug/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp${cfgdir}") # cfgdir has leading slash
 endif()

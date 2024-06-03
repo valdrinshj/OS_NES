@@ -156,7 +156,7 @@ void DrawSprite(Sprite *sprite, uint16_t x, uint16_t y, int32_t scale) {
 void SetupDemo() {
     cpu = CpuGet();
     ppu = PpuGet();
-    Cartridge *cartridge = CartridgeCreate("C:\\Users\\User\\OS\\OS_NES\\Donkey Kong (World) (Rev A).nes");
+    Cartridge *cartridge = CartridgeCreate("C:\\Users\\Startklar\\CLionProjects\\OS_NES\\Alter_Ego.nes");
     NesInsertCartridge(cpu->bus, cartridge);
     // Extract dissassembly
     CpuDisassemble(0x0000, 0xFFFF, mapAsm);
@@ -173,7 +173,7 @@ void UpdateDemo() {
     cpu->bus->controller[0] |= IsKeyDown(KEY_UP) ? 0x08 : 0x00;
     cpu->bus->controller[0] |= IsKeyDown(KEY_DOWN) ? 0x04 : 0x00;
     cpu->bus->controller[0] |= IsKeyDown(KEY_LEFT) ? 0x02 : 0x00;
-    cpu->bus->controller[0] |= IsKeyDown(KEY_RIGHT) ? 0x00 : 0x00;
+    cpu->bus->controller[0] |= IsKeyDown(KEY_RIGHT) ? 0x01 : 0x00;
     float elapsedTime = GetFrameTime();
     if (emulationRun) {
         if (residualTime > 0.0f)
@@ -214,29 +214,36 @@ void UpdateDemo() {
 
 void StartDemo() {
     printf("Hello, Demo!\n");
-    InitWindow(780, 480, "NES Instructions Demo");
+    InitWindow(510, 480, "GAME WINDOW");
 
     SetupDemo();
     const int nSwatchSize = 6;
+    InitAudioDevice();
+    Sound FxWav = LoadSound("C:\\Users\\Startklar\\CLionProjects\\OS_NES\\One Dance (feat. WizKid & Kyla) - Drake (Official Audio).wav");
     while (!WindowShouldClose()) {
         UpdateDemo();
         BeginDrawing();
-        ClearBackground(DARKBLUE);
-        DrawCpu(516, 2);
+        ClearBackground(BLACK);
+        if (IsSoundPlaying(FxWav)) {
+
+        }else {
+            PlaySound(FxWav);
+        }
+        //DrawCpu(516, 2);
         //DrawCode(516, 72, 26);
 
         DrawSprite(ppu->spriteScreen, 0, 0, 2);
 
-        for (int p = 0; p < 8; p++) // For each palette
+        /*for (int p = 0; p < 8; p++) // For each palette
             for(int s = 0; s < 4; s++) // For each index
                 DrawRectangle(516 + p * (nSwatchSize * 5) + s * nSwatchSize, 340,
                               nSwatchSize, nSwatchSize, GetColourFromPaletteRam(p, s));
-
+        */
         // Draw selection reticule around selected palette
-        DrawRectangleLines(516 + selectedPalette * (nSwatchSize * 5) - 1, 339, (nSwatchSize * 4) + 2, nSwatchSize + 2, WHITE);
+        //DrawRectangleLines(516 + selectedPalette * (nSwatchSize * 5) - 1, 339, (nSwatchSize * 4) + 2, nSwatchSize + 2, WHITE);
 
-        DrawSprite(GetPatternTable(0, selectedPalette), 516, 348, 1);
-        DrawSprite(GetPatternTable(1, selectedPalette), 648, 348, 1);
+        //DrawSprite(GetPatternTable(0, selectedPalette), 516, 348, 1);
+        //DrawSprite(GetPatternTable(1, selectedPalette), 648, 348, 1);
 
 
         EndDrawing();
