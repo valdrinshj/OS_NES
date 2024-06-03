@@ -1,5 +1,6 @@
 #include "memory.h"
 
+
 void MemoryInit(Memory *memory) {
     for (uint16_t addr = 0x0000; addr < 0xFFFF; ++addr) {
         memory->RAM[addr] = 0x00;

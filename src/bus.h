@@ -11,6 +11,12 @@ typedef struct {
     Cartridge *cartridge;
     uint8_t controllerState[2];
     uint8_t controller[2];
+    uint32_t systemClocks;
+    uint8_t dma_page;
+    uint8_t dma_addr;
+    uint8_t dma_data;
+    bool dma_transfer;
+    bool dma_dummy;
 } Bus;
 
 void BusInit(Bus *bus);

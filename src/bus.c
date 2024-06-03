@@ -2,10 +2,14 @@
 #include "ppu.h"
 #include "cpu.h"
 
-static uint32_t systemClocks = 0;
 
 void BusInit(Bus *bus) {
-    // TODO: See how this can fit into the code
+    bus->systemClocks = 0;
+    bus->dma_addr = 0x00;
+    bus->dma_data = 0x00;
+    bus->dma_page = 0x00;
+    bus->dma_transfer = false;
+    bus->dma_dummy = true;
 }
 
 uint8_t BusRead(Bus *bus, uint16_t addr) {
@@ -36,6 +40,11 @@ void BusWrite(Bus *bus, uint16_t addr, uint8_t data) {
     else if (addr >= 0x2000 && addr <= 0x3FFF) {
         CpuWriteToPpu(addr, data);
     }
+    else if(addr == 0x4014) {
+        bus->dma_page = data;
+        bus->dma_addr = 0x00;
+        bus->dma_transfer = true;
+    }
     else if (addr >= 0x4016 && addr <= 0x4017) {
         bus->controllerState[addr & 0x0001] = bus->controller[addr & 0x0001];
     }
@@ -48,18 +57,39 @@ void NesInsertCartridge(Bus *bus, Cartridge *cartridge) {
 
 void NesReset(Bus *bus) {
     CpuReset();
-    systemClocks = 0;
+    bus->systemClocks = 0;
 }
 
 void NesClock(Bus *bus) {
     PpuClock();
-    if (systemClocks % 3 == 0) {
-        CpuClock();
+    if (bus->systemClocks % 3 == 0) {
+        if(bus->dma_transfer) {
+            if(bus->dma_dummy) {
+                if(bus->systemClocks % 2 == 1) {
+                    bus->dma_dummy = false;
+                }
+            } else {
+                if(bus->systemClocks % 2 == 0) {
+                    bus->dma_data = CpuRead(bus->dma_page << 8 | bus->dma_addr);
+                } else {
+                    bus->ppu->pOAM[bus->dma_addr] = bus->dma_data;
+                    bus->dma_addr++;
+
+                    if(bus->dma_addr == 0x00) {
+                        bus->dma_transfer = false;
+                        bus->dma_dummy = true;
+                    }
+                }
+
+            }
+        } else {
+            CpuClock();
+        }
     }
 
     if (bus->ppu->nmi) {
         bus->ppu->nmi = false;  // Reset the nmi flag
         CpuNmi();
     }
-    systemClocks++;
+    bus->systemClocks++;
 }

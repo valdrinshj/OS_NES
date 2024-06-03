@@ -156,7 +156,7 @@ void DrawSprite(Sprite *sprite, uint16_t x, uint16_t y, int32_t scale) {
 void SetupDemo() {
     cpu = CpuGet();
     ppu = PpuGet();
-    Cartridge *cartridge = CartridgeCreate("C:\\Users\\Startklar\\CLionProjects\\OS_NES\\Alter_Ego.nes");
+    Cartridge *cartridge = CartridgeCreate("C:\\Users\\User\\OS\\OS_NES\\Donkey Kong (World) (Rev A).nes");
     NesInsertCartridge(cpu->bus, cartridge);
     // Extract dissassembly
     CpuDisassemble(0x0000, 0xFFFF, mapAsm);
@@ -223,7 +223,7 @@ void StartDemo() {
         BeginDrawing();
         ClearBackground(DARKBLUE);
         DrawCpu(516, 2);
-        DrawCode(516, 72, 26);
+        //DrawCode(516, 72, 26);
 
         DrawSprite(ppu->spriteScreen, 0, 0, 2);
 

@@ -99,7 +99,18 @@ typedef struct {
     uint16_t bgShifterAttribLo;
     uint16_t bgShifterAttribHi;
     bool nmi;
+    uint8_t *pOAM;
+    uint8_t oamAddress;
 } Ppu2C02;
+
+typedef struct {
+    uint8_t y;			// Y position of sprite
+    uint8_t id;			// ID of tile from pattern memory
+    uint8_t attribute;	// Flags define how sprite should be rendered
+    uint8_t x;			// X position of sprite
+
+} sObjectAttributeEntry;
+
 
 void PpuInit();
 
@@ -116,5 +127,7 @@ void PpuClock();
 
 Color GetColourFromPaletteRam(uint8_t palette, uint8_t pixel);
 Sprite *GetPatternTable(uint8_t i, uint8_t palette);
+
+uint8_t flipbyte(uint8_t b);
 
 #endif  // PPU_H

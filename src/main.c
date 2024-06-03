@@ -8,6 +8,7 @@ static Bus bus = {0};
 static Memory memory = {0};
 
 int main(void) {
+    BusInit(&bus);
     bus.memory = &memory;
     bus.ppu = PpuGet();
     CpuInit();

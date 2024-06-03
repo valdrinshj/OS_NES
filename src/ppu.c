@@ -8,6 +8,15 @@ Color ColorBuild(uint8_t r, uint8_t g, uint8_t b) {
 }
 
 static Ppu2C02 ppu = {0};
+static PpuCtrl control = {0};
+static PpuStatus status = {0};
+static sObjectAttributeEntry OAM[64];
+static sObjectAttributeEntry spriteScanline[8];
+
+
+static uint8_t sprite_count;
+static uint8_t sprite_shifter_pattern_lo[8];
+static uint8_t sprite_shifter_pattern_hi[8];
 
 void PpuInit() {
     ppu.paletteScreen[0x00] = ColorBuild(84, 84, 84);
@@ -110,6 +119,9 @@ void PpuInit() {
     ppu.bgShifterAttribHi = 0x0000;
 
     ppu.nmi = false;
+
+    ppu.pOAM = (uint8_t*)OAM;
+    ppu.oamAddress = 0x00;
 }
 
 Sprite *SpriteCreate(uint16_t width, uint16_t height) {
@@ -124,6 +136,13 @@ Sprite *SpriteCreate(uint16_t width, uint16_t height) {
     }
     return sprite;
 }
+uint8_t flipbyte(uint8_t b) {
+    b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+    b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+    b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+    return b;
+}
+
 
 Color SpriteGetPixel(Sprite *sprite, uint16_t x, uint16_t y) {
     return sprite->pixels[x*sprite->height + y];
@@ -154,6 +173,7 @@ uint8_t CpuReadFromPpu(uint16_t addr, bool readOnly) {
             case 0x0003: // OAM Address
                 break;
             case 0x0004: // OAM Data
+                data = ppu.pOAM[ppu.oamAddress];
                 break;
             case 0x0005: // Scroll
                 break;
@@ -217,8 +237,10 @@ void CpuWriteToPpu(uint16_t addr, uint8_t data) {
         case 0x0002: // Status
             break;
         case 0x0003: // OAM Address
+            ppu.oamAddress = data;
             break;
         case 0x0004: // OAM Data
+            ppu.pOAM[ppu.oamAddress] = data;
             break;
         case 0x0005: // Scroll
             if (ppu.addressLatch == 0) {
@@ -351,7 +373,7 @@ Sprite *GetPatternTable(uint8_t i, uint8_t palette) {
                 uint8_t tile_lsb = PpuRead(i * 0x1000 + nOffset + row + 0x0000);
                 uint8_t tile_msb = PpuRead(i * 0x1000 + nOffset + row + 0x0008);
                 for (uint16_t col = 0; col < 8; col++) {
-                    uint8_t pixel = ((tile_lsb & 0x01) << 0) | ((tile_msb & 0x01) << 1);
+                    uint8_t pixel = ((tile_lsb & 0x01) << 1) | ((tile_msb & 0x01));
                     tile_lsb >>= 1; tile_msb >>= 1;
                     Color c = GetColourFromPaletteRam(palette, pixel);
                     SpriteSetPixel(ppu.spritePatternTable[i], nTileX * 8 + (7 - col), nTileY * 8 + row, c);
@@ -424,6 +446,16 @@ void PpuUpdateShifters() {
         ppu.bgShifterAttribLo <<= 1;
         ppu.bgShifterAttribHi <<= 1;
     }
+    if(ppu.registers.mask.bits.renderSprites && ppu.cycle >= 1 && ppu.cycle < 258) {
+        for(int i = 0; i < sprite_count; i++) {
+            if(spriteScanline[i].x > 0) {
+                spriteScanline[i].x--;
+            } else {
+                sprite_shifter_pattern_lo[i] << 1;
+                sprite_shifter_pattern_hi[i] << 1;
+            }
+        }
+    }
 }
 
 void PpuClock() {
@@ -433,6 +465,11 @@ void PpuClock() {
         }
         if (ppu.scanline == -1 && ppu.cycle == 1) {
             ppu.registers.status.bits.verticalBlank = 0;
+            status.bits.spriteOverflow = 0;
+            for(int i = 0; i < 8; i++) {
+                sprite_shifter_pattern_lo[i] = 0;
+                sprite_shifter_pattern_hi[i] = 0;
+            }
         }
         if ((ppu.cycle >= 2 && ppu.cycle < 258) || (ppu.cycle >= 321 && ppu.cycle < 338)) {
             PpuUpdateShifters();
@@ -480,6 +517,86 @@ void PpuClock() {
         if (ppu.scanline == -1 && ppu.cycle >= 280 && ppu.cycle < 305) {
             PpuTransferAddressY();
         }
+
+        // FOREGROUND RENDERING
+        if (ppu.cycle == 257 && ppu.scanline > 0) {
+            memset(spriteScanline,0xFF, 8 * sizeof(spriteScanline));
+            sprite_count = 0;
+
+            uint8_t nOAMEntry = 0;
+            while (nOAMEntry < 64 && sprite_count < 9) {
+                int16_t diff = ((int16_t)ppu.scanline - (int16_t)OAM[nOAMEntry].y);
+                if(diff >= 0 && diff < control.bits.spriteSize ? 16 : 8) {
+                    if(sprite_count < 8) {
+                        memcpy(&spriteScanline, &OAM[nOAMEntry], sizeof(spriteScanline));
+                        sprite_count++;
+                    }
+                }
+                nOAMEntry++;
+            }
+            status.bits.spriteOverflow = (sprite_count > 8);
+        }
+        if (ppu.cycle == 340) {
+            for (uint8_t i = 0; i < sprite_count; i++) {
+                uint8_t sprite_pattern_bits_lo, sprite_pattern_bits_hi;
+                uint16_t sprite_pattern_addr_lo, sprite_pattern_addr_hi;
+
+                if(!control.bits.spriteSize) {
+                    // 8x8
+                    if(!(spriteScanline->attribute & 0x80)) {
+                        // Sprite is NOT flipped vertically
+                        sprite_pattern_addr_lo = (control.bits.patternSprite << 12) | (spriteScanline[i].id << 4) | (ppu.scanline - spriteScanline[i].y);
+                    } else {
+                        // Sprite is flipped
+                        sprite_pattern_addr_lo = (control.bits.patternSprite << 12) | (spriteScanline[i].id << 4) | (7 - (ppu.scanline - spriteScanline[i].y));
+                    }
+                } else {
+                    // 8x16
+                    if(!(spriteScanline[i].attribute & 0x80)) {
+                        // Sprite is NOT flipped vertically
+                        if (ppu.scanline - spriteScanline[i].y < 8) {
+                            // reading top half tile
+                            sprite_pattern_addr_lo = ((spriteScanline[i].id & 0x01) << 12)
+                            | (((spriteScanline[i].id & 0xFE)) << 4)
+                            | ((ppu.scanline - spriteScanline[i].y) & 0x07);
+                        } else {
+                            // reading bottom half tile
+                            sprite_pattern_addr_lo = ((spriteScanline[i].id & 0x01) << 12)
+                            | (((spriteScanline[i].id & 0xFE) + 1) << 4)
+                            | ((ppu.scanline - spriteScanline[i].y) & 0x07);
+                        }
+
+                    } else {
+                        // Sprite is flipped vertically
+                        if(ppu.scanline - spriteScanline[i].y < 8) {
+                            // reading top half tile
+                            sprite_pattern_addr_lo = ((spriteScanline[i].id & 0x01) << 12)
+                            | (((spriteScanline[i].id & 0xFE) + 1) << 4)
+                            | (7- (ppu.scanline - spriteScanline[i].y) & 0x07);
+                        } else {
+                            // reading bottom half tile
+                            sprite_pattern_addr_lo = ((spriteScanline[i].id & 0x01) << 12)
+                            | (((spriteScanline[i].id & 0xFE)) << 4)
+                            | (7 - (ppu.scanline - spriteScanline[i].y) & 0x07);
+
+                        }
+                    }
+                }
+
+                sprite_pattern_addr_hi = sprite_pattern_addr_lo + 8;
+                sprite_pattern_bits_lo = PpuRead(sprite_pattern_addr_lo);
+                sprite_pattern_bits_hi = PpuRead(sprite_pattern_addr_hi);
+
+                if(spriteScanline[i].attribute & 0x40) {
+
+                    sprite_pattern_bits_lo = flipbyte(sprite_pattern_bits_lo);
+                    sprite_pattern_bits_hi = flipbyte(sprite_pattern_bits_hi);
+                }
+
+                sprite_shifter_pattern_lo[i] = sprite_pattern_bits_lo;
+                sprite_shifter_pattern_hi[i] = sprite_pattern_bits_hi;
+            }
+        }
     }
 
     if (ppu.scanline == 240) {
@@ -508,9 +625,51 @@ void PpuClock() {
         uint8_t bgPalette1 = (ppu.bgShifterAttribHi & bitMux) > 0;
         bgPalette = (bgPalette1 << 1) | bgPalette0;
     }
+    uint8_t fgPixel = 0x00;
+    uint8_t fgPalette = 0x00;
+    uint8_t fgPriority = 0x00;
+
+    if (ppu.registers.mask.bits.renderSprites) {
+        for(uint8_t i = 0; i < sprite_count ; i++) {
+            if(spriteScanline[i].x == 0) {
+                uint8_t fgPixelLo = (sprite_shifter_pattern_lo[i] & 0x80) > 0;
+                uint8_t fgPixelHi = (sprite_shifter_pattern_hi[i] & 0x80) > 0;
+                fgPixel = (fgPixelHi << 1) | fgPixelLo;
+
+                fgPalette = (spriteScanline[i].attribute & 0x03) + 0x04;
+                fgPriority = (spriteScanline[i].attribute & 0x20) == 0;
+                if(fgPixel != 0) {
+                    break;
+                }
+            }
+        }
+    }
+
+    uint8_t pixel = 0x00; // Final pixel
+    uint8_t palette = 0x00; // Final palette
+
+    if (bgPixel == 0 && fgPixel == 0) {
+        // transparent
+        pixel = 0x00;
+        palette = 0x00;
+    } else if(bgPixel == 0 && fgPixel > 0) {
+        pixel = fgPixel;
+        palette = fgPalette;
+    } else if (bgPixel > 0 && fgPixel == 0) {
+        pixel = bgPixel;
+        palette = bgPalette;
+    } else if (bgPixel > 0 && fgPixel > 0) {
+        if (fgPriority) {
+            pixel = fgPixel;
+            palette = fgPalette;
+        } else {
+            pixel = bgPixel;
+            palette = bgPalette;
+        }
+    }
 
     // Update the Sprite screen with the appropiate pixels and palettes
-    SpriteSetPixel(ppu.spriteScreen, ppu.cycle - 1, ppu.scanline, GetColourFromPaletteRam(bgPalette, bgPixel));
+    SpriteSetPixel(ppu.spriteScreen, ppu.cycle - 1, ppu.scanline, GetColourFromPaletteRam(palette, pixel));
 
     // Advance renderer - it never stops, it's relentless
     ppu.cycle++;
