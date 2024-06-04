@@ -175,7 +175,7 @@ uint8_t CpuReadFromPpu(uint16_t addr, bool readOnly) {
             case 0x0003: // OAM Address
                 break;
             case 0x0004: // OAM Data
-                data = ppu.pOAM[ppu.oamAddress];
+                //data = ppu.pOAM[ppu.oamAddress];
                 break;
             case 0x0005: // Scroll
                 break;
@@ -205,7 +205,9 @@ uint8_t CpuReadFromPpu(uint16_t addr, bool readOnly) {
             case 0x0003: break;
 
                 // OAM Data
-            case 0x0004: break;
+            case 0x0004:
+                data = ppu.pOAM[ppu.oamAddress];
+                break;
 
                 // Scroll - Not Readable
             case 0x0005: break;
@@ -525,12 +527,15 @@ void PpuClock() {
         if (ppu.cycle == 257 && ppu.scanline > 0) {
             memset(spriteScanline,0xFF, 8 * sizeof(sObjectAttributeEntry));
             sprite_count = 0;
-
+            for (uint8_t i = 0; i < 8; i++) {
+                sprite_shifter_pattern_lo[i] = 0;
+                sprite_shifter_pattern_hi[i] = 0;
+            }
             uint8_t nOAMEntry = 0;
             bSpriteZeroHitPossible = false;
             while (nOAMEntry < 64 && sprite_count < 9) {
                 int16_t diff = ((int16_t)ppu.scanline - (int16_t)OAM[nOAMEntry].y);
-                if(diff >= 0 && diff < control.bits.spriteSize ? 16 : 8) {
+                if(diff >= 0 && diff < (control.bits.spriteSize ? 16 : 8)) {
                     if(sprite_count < 8) {
                         if (nOAMEntry == 0) {
                             bSpriteZeroHitPossible = true;
