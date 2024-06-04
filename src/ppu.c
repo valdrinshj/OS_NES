@@ -17,6 +17,8 @@ static sObjectAttributeEntry spriteScanline[8];
 static uint8_t sprite_count;
 static uint8_t sprite_shifter_pattern_lo[8];
 static uint8_t sprite_shifter_pattern_hi[8];
+bool bSpriteZeroHitPossible = false;
+bool bSpriteZeroBeingRendered = false;
 
 void PpuInit() {
     ppu.paletteScreen[0x00] = ColorBuild(84, 84, 84);
@@ -158,7 +160,7 @@ bool SpriteSetPixel(Sprite *sprite, uint16_t x, uint16_t y, Color color) {
 
 uint8_t CpuReadFromPpu(uint16_t addr, bool readOnly) {
     uint8_t data = 0x00;
-    addr &= 0x0007; // PPU is mirrored to the first 8 addresess
+    addr &= 0x0007; // PPU is mirrored to the first 8 addresses
     if (readOnly) {
         switch (addr) {
             case 0x0000: // Control
@@ -451,8 +453,8 @@ void PpuUpdateShifters() {
             if(spriteScanline[i].x > 0) {
                 spriteScanline[i].x--;
             } else {
-                sprite_shifter_pattern_lo[i] << 1;
-                sprite_shifter_pattern_hi[i] << 1;
+                sprite_shifter_pattern_lo[i] <<= 1;
+                sprite_shifter_pattern_hi[i] <<= 1;
             }
         }
     }
@@ -465,6 +467,7 @@ void PpuClock() {
         }
         if (ppu.scanline == -1 && ppu.cycle == 1) {
             ppu.registers.status.bits.verticalBlank = 0;
+            status.bits.spriteZeroHit = 0;
             status.bits.spriteOverflow = 0;
             for(int i = 0; i < 8; i++) {
                 sprite_shifter_pattern_lo[i] = 0;
@@ -520,15 +523,19 @@ void PpuClock() {
 
         // FOREGROUND RENDERING
         if (ppu.cycle == 257 && ppu.scanline > 0) {
-            memset(spriteScanline,0xFF, 8 * sizeof(spriteScanline));
+            memset(spriteScanline,0xFF, 8 * sizeof(sObjectAttributeEntry));
             sprite_count = 0;
 
             uint8_t nOAMEntry = 0;
+            bSpriteZeroHitPossible = false;
             while (nOAMEntry < 64 && sprite_count < 9) {
                 int16_t diff = ((int16_t)ppu.scanline - (int16_t)OAM[nOAMEntry].y);
                 if(diff >= 0 && diff < control.bits.spriteSize ? 16 : 8) {
                     if(sprite_count < 8) {
-                        memcpy(&spriteScanline, &OAM[nOAMEntry], sizeof(spriteScanline));
+                        if (nOAMEntry == 0) {
+                            bSpriteZeroHitPossible = true;
+                        }
+                        memcpy(&spriteScanline, &OAM[nOAMEntry], sizeof(sObjectAttributeEntry));
                         sprite_count++;
                     }
                 }
@@ -543,7 +550,7 @@ void PpuClock() {
 
                 if(!control.bits.spriteSize) {
                     // 8x8
-                    if(!(spriteScanline->attribute & 0x80)) {
+                    if(!(spriteScanline[i].attribute & 0x80)) {
                         // Sprite is NOT flipped vertically
                         sprite_pattern_addr_lo = (control.bits.patternSprite << 12) | (spriteScanline[i].id << 4) | (ppu.scanline - spriteScanline[i].y);
                     } else {
@@ -557,7 +564,7 @@ void PpuClock() {
                         if (ppu.scanline - spriteScanline[i].y < 8) {
                             // reading top half tile
                             sprite_pattern_addr_lo = ((spriteScanline[i].id & 0x01) << 12)
-                            | (((spriteScanline[i].id & 0xFE)) << 4)
+                            | ((spriteScanline[i].id & 0xFE) << 4)
                             | ((ppu.scanline - spriteScanline[i].y) & 0x07);
                         } else {
                             // reading bottom half tile
@@ -576,7 +583,7 @@ void PpuClock() {
                         } else {
                             // reading bottom half tile
                             sprite_pattern_addr_lo = ((spriteScanline[i].id & 0x01) << 12)
-                            | (((spriteScanline[i].id & 0xFE)) << 4)
+                            | ((spriteScanline[i].id & 0xFE) << 4)
                             | (7 - (ppu.scanline - spriteScanline[i].y) & 0x07);
 
                         }
@@ -630,6 +637,7 @@ void PpuClock() {
     uint8_t fgPriority = 0x00;
 
     if (ppu.registers.mask.bits.renderSprites) {
+        bSpriteZeroBeingRendered = false;
         for(uint8_t i = 0; i < sprite_count ; i++) {
             if(spriteScanline[i].x == 0) {
                 uint8_t fgPixelLo = (sprite_shifter_pattern_lo[i] & 0x80) > 0;
@@ -639,6 +647,9 @@ void PpuClock() {
                 fgPalette = (spriteScanline[i].attribute & 0x03) + 0x04;
                 fgPriority = (spriteScanline[i].attribute & 0x20) == 0;
                 if(fgPixel != 0) {
+                    if (i == 0){
+                        bSpriteZeroBeingRendered = true;
+                    }
                     break;
                 }
             }
@@ -659,16 +670,29 @@ void PpuClock() {
         pixel = bgPixel;
         palette = bgPalette;
     } else if (bgPixel > 0 && fgPixel > 0) {
-        if (fgPriority) {
+        if (fgPriority == 0) {
             pixel = fgPixel;
             palette = fgPalette;
         } else {
             pixel = bgPixel;
             palette = bgPalette;
         }
+        if (bSpriteZeroBeingRendered && bSpriteZeroHitPossible) {
+            if (ppu.registers.mask.bits.renderBackground && ppu.registers.mask.bits.renderSprites) {
+                if (~(ppu.registers.mask.bits.renderBackgroundLeft | ppu.registers.mask.bits.renderSpritesLeft)) {
+                    if (ppu.cycle >= 9 && ppu.cycle < 258) {
+                        status.bits.spriteZeroHit = 1;
+                    }
+                } else {
+                    if (ppu.cycle >= 1 && ppu.cycle < 258) {
+                        status.bits.spriteZeroHit = 1;
+                    }
+                }
+            }
+        }
     }
 
-    // Update the Sprite screen with the appropiate pixels and palettes
+    // Update the Sprite screen with the appropriate pixels and palettes
     SpriteSetPixel(ppu.spriteScreen, ppu.cycle - 1, ppu.scanline, GetColourFromPaletteRam(palette, pixel));
 
     // Advance renderer - it never stops, it's relentless
