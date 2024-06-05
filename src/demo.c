@@ -156,7 +156,7 @@ void DrawSprite(Sprite *sprite, uint16_t x, uint16_t y, int32_t scale) {
 void SetupDemo() {
     cpu = CpuGet();
     ppu = PpuGet();
-    Cartridge *cartridge = CartridgeCreate("C:\\Users\\Startklar\\CLionProjects\\OS_NES\\Chase.nes");
+    Cartridge *cartridge = CartridgeCreate("C:\\Users\\User\\OS\\OS_NES\\Alter_Ego.nes");
     NesInsertCartridge(cpu->bus, cartridge);
     // Extract dissassembly
     CpuDisassemble(0x0000, 0xFFFF, mapAsm);
