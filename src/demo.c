@@ -219,7 +219,7 @@ void StartDemo() {
     SetupDemo();
     const int nSwatchSize = 6;
     InitAudioDevice();
-    Sound FxWav = LoadSound("C:\\Users\\Startklar\\CLionProjects\\OS_NES\\One Dance (feat. WizKid & Kyla) - Drake (Official Audio).wav");
+    Sound FxWav = LoadSound("C:\\Users\\Startklar\\CLionProjects\\OS_NES\\CHASE_BOSS_MUSIC.wav");
     while (!WindowShouldClose()) {
         UpdateDemo();
         BeginDrawing();
