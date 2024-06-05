@@ -126,8 +126,8 @@ void PpuInit() {
     ppu.oamAddress = 0x00;
 }
 
-Sprite *SpriteCreate(uint16_t width, uint16_t height) {
-    Sprite *sprite = (Sprite*)malloc(sizeof(sprite));
+Sprite *SpriteCreate(int32_t width, int32_t height) {
+    Sprite *sprite = (Sprite*)malloc(sizeof(Sprite));
     sprite->width = width;
     sprite->height = height;
     sprite->pixels = (Color*)malloc(width*height*sizeof(Color));
@@ -146,13 +146,13 @@ uint8_t flipbyte(uint8_t b) {
 }
 
 
-Color SpriteGetPixel(Sprite *sprite, uint16_t x, uint16_t y) {
-    return sprite->pixels[x*sprite->height + y];
+Color SpriteGetPixel(Sprite *sprite, int32_t x, int32_t y) {
+    return sprite->pixels[y*sprite->width + x];
 }
 
-bool SpriteSetPixel(Sprite *sprite, uint16_t x, uint16_t y, Color color) {
+bool SpriteSetPixel(Sprite *sprite, int32_t x, int32_t y, Color color) {
     if (x >= 0 && x < sprite->width && y >= 0 && y < sprite->height) {
-        sprite->pixels[x*sprite->height + y] = color;
+        sprite->pixels[y*sprite->width + x] = color;
         return true;
     }
     return false;
@@ -524,8 +524,8 @@ void PpuClock() {
         }
 
         // FOREGROUND RENDERING
-        if (ppu.cycle == 257 && ppu.scanline > 0) {
-            memset(spriteScanline,0xFF, 8 * sizeof(sObjectAttributeEntry));
+        if (ppu.cycle == 257 && ppu.scanline >= 0) {
+            memset(spriteScanline, 0xFF, 8 * sizeof(sObjectAttributeEntry));
             sprite_count = 0;
             for (uint8_t i = 0; i < 8; i++) {
                 sprite_shifter_pattern_lo[i] = 0;
@@ -533,14 +533,14 @@ void PpuClock() {
             }
             uint8_t nOAMEntry = 0;
             bSpriteZeroHitPossible = false;
-            while (nOAMEntry < 64 && sprite_count < 9) {
+            while (nOAMEntry < 64 && sprite_count < 8) {
                 int16_t diff = ((int16_t)ppu.scanline - (int16_t)OAM[nOAMEntry].y);
                 if(diff >= 0 && diff < (control.bits.spriteSize ? 16 : 8)) {
                     if(sprite_count < 8) {
                         if (nOAMEntry == 0) {
                             bSpriteZeroHitPossible = true;
                         }
-                        memcpy(&spriteScanline, &OAM[nOAMEntry], sizeof(sObjectAttributeEntry));
+                        memcpy(&spriteScanline[sprite_count], &OAM[nOAMEntry], sizeof(sObjectAttributeEntry));
                         sprite_count++;
                     }
                 }
@@ -684,7 +684,7 @@ void PpuClock() {
         }
         if (bSpriteZeroBeingRendered && bSpriteZeroHitPossible) {
             if (ppu.registers.mask.bits.renderBackground && ppu.registers.mask.bits.renderSprites) {
-                if (~(ppu.registers.mask.bits.renderBackgroundLeft | ppu.registers.mask.bits.renderSpritesLeft)) {
+                if (!(ppu.registers.mask.bits.renderBackgroundLeft && ppu.registers.mask.bits.renderSpritesLeft)) {
                     if (ppu.cycle >= 9 && ppu.cycle < 258) {
                         status.bits.spriteZeroHit = 1;
                     }

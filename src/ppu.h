@@ -8,13 +8,13 @@
 
 typedef struct {
     Color *pixels;
-    uint16_t width;
-    uint16_t height;
+    int32_t width;
+    int32_t height;
 } Sprite;
 
-Sprite *SpriteCreate(uint16_t width, uint16_t height);
-Color SpriteGetPixel(Sprite *sprite, uint16_t x, uint16_t y);
-bool SpriteSetPixel(Sprite *sprite, uint16_t x, uint16_t y, Color color);
+Sprite *SpriteCreate(int32_t width, int32_t height);
+Color SpriteGetPixel(Sprite *sprite, int32_t x, int32_t y);
+bool SpriteSetPixel(Sprite *sprite, int32_t x, int32_t y, Color color);
 
 typedef union {
     struct {
