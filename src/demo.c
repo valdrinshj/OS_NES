@@ -156,7 +156,7 @@ void DrawSprite(Sprite *sprite, uint16_t x, uint16_t y, int32_t scale) {
 void SetupDemo() {
     cpu = CpuGet();
     ppu = PpuGet();
-    Cartridge *cartridge = CartridgeCreate("C:\\Users\\User\\OS\\OS_NES\\Alter_Ego.nes");
+    Cartridge *cartridge = CartridgeCreate("C:\\Users\\Startklar\\CLionProjects\\OS_NES\\Chase.nes");
     NesInsertCartridge(cpu->bus, cartridge);
     // Extract dissassembly
     CpuDisassemble(0x0000, 0xFFFF, mapAsm);
@@ -214,12 +214,12 @@ void UpdateDemo() {
 
 void StartDemo() {
     printf("Hello, Demo!\n");
-    InitWindow(510, 480, "GAME WINDOW");
+    InitWindow(255, 240, "GAME WINDOW");
 
     SetupDemo();
     const int nSwatchSize = 6;
     InitAudioDevice();
-    Sound FxWav = LoadSound("C:\\Users\\Startklar\\CLionProjects\\OS_NES\\CHASE_BOSS_MUSIC.wav");
+    Sound FxWav = LoadSound("C:\\Users\\Startklar\\CLionProjects\\OS_NES\\NES MUSIC.wav");
     while (!WindowShouldClose()) {
         UpdateDemo();
         BeginDrawing();
@@ -232,7 +232,7 @@ void StartDemo() {
         //DrawCpu(516, 2);
         //DrawCode(516, 72, 26);
 
-        DrawSprite(ppu->spriteScreen, 0, 0, 2);
+        DrawSprite(ppu->spriteScreen, 0, 0, 1);
 
         /*for (int p = 0; p < 8; p++) // For each palette
             for(int s = 0; s < 4; s++) // For each index
