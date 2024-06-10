@@ -13,7 +13,7 @@ int main(void) {
     bus.ppu = PpuGet();
     CpuInit();
     PpuInit();
-    CpuConnectBus(&bus);
+    ConnectBus(&bus);
     StartDemo();
     return 0;
 }

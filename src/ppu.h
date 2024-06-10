@@ -1,7 +1,6 @@
 #ifndef PPU_H
 #define PPU_H
 
-
 #include "cartridge.h"
 #include <raylib.h>
 #include <stdint.h>
@@ -76,7 +75,7 @@ typedef struct {
     Cartridge *cartridge;
     uint8_t nameTable[2][1024];
     uint8_t paletteTable[32];
-    uint8_t patternTable[2][4096];   // This table wont be used in the real emulation. Just keep it here for the moment for the design.
+    uint8_t patternTable[2][4096];
     Color paletteScreen[64];
     Sprite *spriteScreen;
     Sprite *spriteNameTable[2];

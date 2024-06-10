@@ -1,131 +1,12 @@
 #include "demo.h"
 #include "cpu.h"
 #include <raylib.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-#define HEX_CHARS "0123456789ABCDEF"
-
-static char* mapAsm[0xFFFF] = {0};
 static Cpu6502 *cpu = {0};
 static Ppu2C02 *ppu = {0};
 static bool emulationRun = false;
 static float residualTime = 0.0f;
 static uint8_t selectedPalette = 0;
-
-static char* hex(uint32_t n, uint8_t d, char *dst) {
-    strset(dst, 0);
-    int i;
-    dst[d] = 0;
-    for (i = d - 1; i >= 0; i--, n >>= 4) {
-        dst[i] = HEX_CHARS[n & 0xF];
-    }
-    return dst;
-}
-
-void DrawRam(int x, int y, uint16_t nAddr, int nRows, int nColumns) {
-    int nRamX = x, nRamY = y;
-    char hex_aux[16];
-    char sOffSet[1024];
-    for (int row = 0; row < nRows; row++) {
-        strset(sOffSet, 0);
-        strcat(sOffSet, "$");
-        strcat(sOffSet, hex(nAddr, 4, hex_aux));
-        strcat(sOffSet, ":");
-        for (int col = 0; col < nColumns; col++) {
-            strcat(sOffSet, " ");
-            strcat(sOffSet, hex(CpuRead(nAddr), 2, hex_aux));
-            nAddr += 1;
-        }
-        DrawText(sOffSet, nRamX, nRamY, 4, BLACK);
-        nRamY += 10;
-    }
-}
-
-void DrawCpu(int x, int y) {
-    char hex_aux[16];
-    DrawText("STATUS:", x , y , 4, WHITE);
-    DrawText("N", x  + 64, y,  4, cpu->status & N ? GREEN : RED);
-    DrawText("V",x  + 80, y ,  4, cpu->status & V ? GREEN : RED);
-    DrawText("-",x  + 96, y ,  4, cpu->status & U ? GREEN : RED);
-    DrawText("B",x  + 112, y ,  4, cpu->status & B ? GREEN : RED);
-    DrawText("D",x  + 128, y ,  4, cpu->status & D ? GREEN : RED);
-    DrawText("I",x  + 144, y ,  4, cpu->status & I ? GREEN : RED);
-    DrawText("Z",x  + 160, y ,  4, cpu->status & Z ? GREEN : RED);
-    DrawText("C",x  + 178, y ,  4, cpu->status & C ? GREEN : RED);
-    char pc[1024];
-    char a[1024];
-    char xr[1024];
-    char yr[1024];
-    char sp[1024];
-
-    strcpy(pc, "");
-    strcpy(a, "");
-    strcpy(xr, "");
-    strcpy(yr, "");
-    strcpy(sp, "");
-
-    strcat(pc, "PC: $");
-    strcat(pc, hex(cpu->PC, 4, hex_aux));
-
-    strcat(a, "A: $");
-    strcat(a, hex(cpu->A, 2, hex_aux));
-    strcat(a, "  [");
-    char *a_str [256];
-    sprintf(a_str,"%d", cpu->A);
-    strcat(a, a_str);
-    strcat(a, "]");
-
-    strcat(xr, "X: $");
-    strcat(xr, hex(cpu->X, 2, hex_aux));
-    strcat(xr, "  [");
-    char *x_str [256];
-    sprintf(x_str,"%d", cpu->X);
-    strcat(xr, x_str);
-    strcat(xr, "]");
-
-    strcat(yr, "Y: $");
-    strcat(yr, hex(cpu->Y, 2, hex_aux));
-    strcat(yr, "  [");
-    char *y_str [256];
-    sprintf(y_str,"%d", cpu->Y);
-    strcat(yr, y_str);
-    strcat(yr, "]");
-
-    strcat(sp, "SP: $");
-    strcat(sp, hex(cpu->SP, 4, hex_aux));
-
-
-    DrawText(pc, x , y + 10, 4, WHITE);
-    DrawText(a, x , y + 20, 4, WHITE);
-    DrawText(xr, x , y + 30, 4, WHITE);
-    DrawText(yr, x , y + 40, 4, WHITE);
-    DrawText(sp, x , y + 50, 4, WHITE);
-}
-
-void DrawCode(int x, int y, int nLines) {
-    int nLineY = (nLines >> 1) * 10 + y;
-    uint16_t pc = cpu->PC;
-    char *pcLine = mapAsm[pc++];
-    DrawText(pcLine, x, nLineY, 4, GREEN);
-    while (nLineY < (nLines * 10) + y) {
-        pcLine = mapAsm[pc++];
-        if (pcLine != NULL) {
-            nLineY += 10;
-            DrawText(pcLine, x, nLineY, 4, WHITE);
-        }
-    }
-    pc = cpu->PC;
-    nLineY = (nLines >> 1) * 10 + y;
-    while (nLineY > y) {
-        pcLine = mapAsm[--pc];
-        if (pcLine != NULL) {
-            nLineY -= 10;
-            DrawText(pcLine, x, nLineY, 4, WHITE);
-        }
-    }
-}
 
 void DrawSprite(Sprite *sprite, uint16_t x, uint16_t y, int32_t scale) {
     if (sprite == NULL) return;
@@ -156,10 +37,8 @@ void DrawSprite(Sprite *sprite, uint16_t x, uint16_t y, int32_t scale) {
 void SetupDemo() {
     cpu = CpuGet();
     ppu = PpuGet();
-    Cartridge *cartridge = CartridgeCreate("C:\\Users\\User\\OS\\OS_NES\\Alter_Ego.nes");
+    Cartridge *cartridge = CartridgeCreate("C:\\Users\\Startklar\\CLionProjects\\OS_NES\\Chase.nes");
     NesInsertCartridge(cpu->bus, cartridge);
-    // Extract dissassembly
-    CpuDisassemble(0x0000, 0xFFFF, mapAsm);
     // Reset
     NesReset(cpu->bus);
 }
@@ -213,13 +92,11 @@ void UpdateDemo() {
 }
 
 void StartDemo() {
-    printf("Hello, Demo!\n");
-    InitWindow(510, 480, "GAME WINDOW");
+    InitWindow(255, 240, "GAME WINDOW");
 
     SetupDemo();
-    const int nSwatchSize = 6;
     InitAudioDevice();
-    Sound FxWav = LoadSound("C:\\Users\\Startklar\\CLionProjects\\OS_NES\\CHASE_BOSS_MUSIC.wav");
+    Sound FxWav = LoadSound("C:\\Users\\Startklar\\CLionProjects\\OS_NES\\NES MUSIC.wav");
     while (!WindowShouldClose()) {
         UpdateDemo();
         BeginDrawing();
@@ -229,22 +106,8 @@ void StartDemo() {
         }else {
             PlaySound(FxWav);
         }
-        //DrawCpu(516, 2);
-        //DrawCode(516, 72, 26);
 
-        DrawSprite(ppu->spriteScreen, 0, 0, 2);
-
-        /*for (int p = 0; p < 8; p++) // For each palette
-            for(int s = 0; s < 4; s++) // For each index
-                DrawRectangle(516 + p * (nSwatchSize * 5) + s * nSwatchSize, 340,
-                              nSwatchSize, nSwatchSize, GetColourFromPaletteRam(p, s));
-        */
-        // Draw selection reticule around selected palette
-        //DrawRectangleLines(516 + selectedPalette * (nSwatchSize * 5) - 1, 339, (nSwatchSize * 4) + 2, nSwatchSize + 2, WHITE);
-
-        //DrawSprite(GetPatternTable(0, selectedPalette), 516, 348, 1);
-        //DrawSprite(GetPatternTable(1, selectedPalette), 648, 348, 1);
-
+        DrawSprite(ppu->spriteScreen, 0, 0, 1);
 
         EndDrawing();
     }

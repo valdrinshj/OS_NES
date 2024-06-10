@@ -12,7 +12,7 @@ void BusInit(Bus *bus) {
     bus->dma_dummy = true;
 }
 
-uint8_t BusRead(Bus *bus, uint16_t addr) {
+uint8_t CpuRead(Bus *bus, uint16_t addr) {
     uint8_t data = 0x00;
     if (CartridgeCpuRead(bus->cartridge, addr, &data)) {
 
@@ -30,7 +30,7 @@ uint8_t BusRead(Bus *bus, uint16_t addr) {
     return data;
 }
 
-void BusWrite(Bus *bus, uint16_t addr, uint8_t data) {
+void CpuWrite(Bus *bus, uint16_t addr, uint8_t data) {
     if (CartridgeCpuWrite(bus->cartridge, addr, data)) {
 
     }
@@ -56,7 +56,7 @@ void NesInsertCartridge(Bus *bus, Cartridge *cartridge) {
 }
 
 void NesReset(Bus *bus) {
-    CpuReset();
+    Reset();
     bus->systemClocks = 0;
 }
 
@@ -70,7 +70,7 @@ void NesClock(Bus *bus) {
                 }
             } else {
                 if(bus->systemClocks % 2 == 0) {
-                    bus->dma_data = CpuRead(bus->dma_page << 8 | bus->dma_addr);
+                    bus->dma_data = Read(bus->dma_page << 8 | bus->dma_addr);
                 } else {
                     bus->ppu->pOAM[bus->dma_addr] = bus->dma_data;
                     bus->dma_addr++;
@@ -83,13 +83,13 @@ void NesClock(Bus *bus) {
 
             }
         } else {
-            CpuClock();
+            Clock();
         }
     }
 
     if (bus->ppu->nmi) {
         bus->ppu->nmi = false;  // Reset the nmi flag
-        CpuNmi();
+        Nmi();
     }
     bus->systemClocks++;
 }

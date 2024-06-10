@@ -21,8 +21,8 @@ typedef struct {
 
 void BusInit(Bus *bus);
 
-uint8_t BusRead(Bus *bus, uint16_t addr);
-void BusWrite(Bus *bus, uint16_t addr, uint8_t data);
+uint8_t CpuRead(Bus *bus, uint16_t addr);
+void CpuWrite(Bus *bus, uint16_t addr, uint8_t data);
 
 void NesInsertCartridge(Bus *bus, Cartridge *cartridge);
 void NesReset(Bus *bus);
