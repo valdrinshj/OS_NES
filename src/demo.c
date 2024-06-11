@@ -6,7 +6,7 @@ static Cpu6502 *cpu = {0};
 static Ppu2C02 *ppu = {0};
 static bool emulationRun = false;
 static float residualTime = 0.0f;
-static uint8_t selectedPalette = 0;
+static int gamepad = 0;
 
 void DrawSprite(Sprite *sprite, uint16_t x, uint16_t y, int32_t scale) {
     if (sprite == NULL) return;
@@ -37,7 +37,7 @@ void DrawSprite(Sprite *sprite, uint16_t x, uint16_t y, int32_t scale) {
 void SetupDemo() {
     cpu = CpuGet();
     ppu = PpuGet();
-    Cartridge *cartridge = CartridgeCreate("C:\\Users\\Startklar\\CLionProjects\\OS_NES\\Chase.nes");
+    Cartridge *cartridge = CartridgeCreate("C:\\Users\\Startklar\\CLionProjects\\OS_NES\\Alter_Ego.nes");
     NesInsertCartridge(cpu->bus, cartridge);
     // Reset
     NesReset(cpu->bus);
@@ -53,6 +53,20 @@ void UpdateDemo() {
     cpu->bus->controller[0] |= IsKeyDown(KEY_DOWN) ? 0x04 : 0x00;
     cpu->bus->controller[0] |= IsKeyDown(KEY_LEFT) ? 0x02 : 0x00;
     cpu->bus->controller[0] |= IsKeyDown(KEY_RIGHT) ? 0x01 : 0x00;
+
+    if (IsGamepadAvailable(gamepad)) {
+        cpu->bus->controller[0] |= IsGamepadButtonDown(gamepad, GAMEPAD_BUTTON_LEFT_FACE_UP) ? 0x08 : 0x00;
+        cpu->bus->controller[0] |= IsGamepadButtonDown(gamepad, GAMEPAD_BUTTON_LEFT_FACE_DOWN) ? 0x04 : 0x00;
+        cpu->bus->controller[0] |= IsGamepadButtonDown(gamepad, GAMEPAD_BUTTON_LEFT_FACE_LEFT) ? 0x02 : 0x00;
+        cpu->bus->controller[0] |= IsGamepadButtonDown(gamepad, GAMEPAD_BUTTON_LEFT_FACE_RIGHT) ? 0x01 : 0x00;
+
+        cpu->bus->controller[0] |= IsGamepadButtonDown(gamepad, GAMEPAD_BUTTON_MIDDLE_RIGHT) ? 0x10 : 0x00;
+        cpu->bus->controller[0] |= IsGamepadButtonDown(gamepad, GAMEPAD_BUTTON_MIDDLE_LEFT) ? 0x20 : 0x00;
+        cpu->bus->controller[0] |= IsGamepadButtonDown(gamepad, GAMEPAD_BUTTON_RIGHT_FACE_DOWN) ? 0x40 : 0x00;
+        cpu->bus->controller[0] |= IsGamepadButtonDown(gamepad, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT) ? 0x80 : 0x00;
+
+    }
+
     float elapsedTime = GetFrameTime();
     if (emulationRun) {
         if (residualTime > 0.0f)
@@ -63,35 +77,12 @@ void UpdateDemo() {
             ppu->frameCompleted = false;
         }
     }
-    else {
-        // Emulate code step-by-step
-        if (IsKeyDown(KEY_C)) {
-            // Clock enough times to execute a whole CPU instruction
-            do { NesClock(cpu->bus); } while (!CpuComplete());
-            // CPU clock runs slower than system clock, so it may be
-            // complete for additional system clock cycles. Drain
-            // those out
-            do { NesClock(cpu->bus); } while (!CpuComplete());
-        }
-
-        // Emulate one whole frame
-        if (IsKeyPressed(KEY_F)) {
-            // Clock enough times to draw a single frame
-            do { NesClock(cpu->bus); } while (!ppu->frameCompleted);
-            // Use residual clock cycles to complete current instruction
-            do { NesClock(cpu->bus); } while (!CpuComplete());
-            // Reset frame completion flag
-            ppu->frameCompleted = false;
-        }
-    }
-
     if (IsKeyPressed(KEY_SPACE)) emulationRun = !emulationRun;
     if (IsKeyPressed(KEY_R)) NesReset(cpu->bus);
-
-    if (IsKeyPressed(KEY_P)) selectedPalette = (selectedPalette + 1) % 8;
 }
 
 void StartDemo() {
+    SetConfigFlags(FLAG_MSAA_4X_HINT);
     InitWindow(255, 240, "GAME WINDOW");
 
     SetupDemo();
